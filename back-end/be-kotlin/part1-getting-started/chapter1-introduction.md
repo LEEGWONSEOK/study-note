@@ -1,0 +1,525 @@
+# Chapter 1. Kotlin 소개
+
+## 1.1 Kotlin이란?
+
+Kotlin은 JetBrains에서 개발한 **정적 타입 프로그래밍 언어**입니다.
+
+### 핵심 특징
+- **JVM 기반**: Java Virtual Machine에서 실행되며 Java와 100% 호환
+- **간결함**: Java보다 훨씬 적은 코드로 동일한 기능 구현
+- **안전성**: Null 안전성을 언어 차원에서 지원
+- **실용성**: 실무에서 바로 사용할 수 있는 실용적인 언어
+- **멀티플랫폼**: JVM뿐만 아니라 JavaScript, Native로도 컴파일 가능
+
+### 탄생 배경
+```
+2011년 - JetBrains가 Kotlin 프로젝트 공개
+2016년 - Kotlin 1.0 정식 출시
+2017년 - Google이 Android 공식 언어로 채택
+2019년 - Android 개발 우선 언어(Kotlin-first)로 지정
+현재   - Spring, Android, 서버 사이드 개발에서 널리 사용
+```
+
+---
+
+## 1.2 왜 Kotlin인가? (Java와의 비교)
+
+### Java 개발자가 Kotlin을 선택하는 이유
+
+#### 1. 코드 간결성
+**Java 코드**:
+```java
+public class Person {
+    private final String name;
+    private final int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Person person = (Person) o;
+        return age == person.age && Objects.equals(name, person.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, age);
+    }
+
+    @Override
+    public String toString() {
+        return "Person{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}
+```
+
+**Kotlin 코드** (동일한 기능):
+```kotlin
+data class Person(val name: String, val age: Int)
+```
+
+**결과**: 26줄 → 1줄 (96% 감소!)
+
+---
+
+#### 2. Null 안전성
+
+**Java 코드**:
+```java
+public String getUpperCaseName(Person person) {
+    if (person != null) {
+        String name = person.getName();
+        if (name != null) {
+            return name.toUpperCase();
+        }
+    }
+    return "UNKNOWN";
+}
+```
+
+**Kotlin 코드**:
+```kotlin
+fun getUpperCaseName(person: Person?): String {
+    return person?.name?.uppercase() ?: "UNKNOWN"
+}
+```
+
+**차이점**:
+- Kotlin은 타입 시스템에서 Null 가능성을 명시 (`?`)
+- 안전 호출 연산자 (`?.`)로 간결하게 처리
+- Elvis 연산자 (`?:`)로 기본값 제공
+
+---
+
+#### 3. 함수형 프로그래밍 지원
+
+**Java 코드** (Java 8+):
+```java
+List<String> names = people.stream()
+    .filter(p -> p.getAge() >= 18)
+    .map(Person::getName)
+    .collect(Collectors.toList());
+```
+
+**Kotlin 코드**:
+```kotlin
+val names = people
+    .filter { it.age >= 18 }
+    .map { it.name }
+```
+
+**차이점**:
+- Stream API 없이 컬렉션에서 직접 사용
+- 람다 문법이 더 간결 (`it` 키워드)
+- 별도의 collect 불필요
+
+---
+
+#### 4. 확장 함수
+
+**Java**: 유틸리티 클래스 필요
+```java
+public class StringUtils {
+    public static boolean isValidEmail(String email) {
+        return email != null && email.contains("@");
+    }
+}
+
+// 사용
+StringUtils.isValidEmail(email);
+```
+
+**Kotlin**: 확장 함수로 자연스럽게
+```kotlin
+fun String.isValidEmail(): Boolean {
+    return this.contains("@")
+}
+
+// 사용
+email.isValidEmail()
+```
+
+---
+
+#### 5. 스마트 캐스팅
+
+**Java**:
+```java
+if (obj instanceof String) {
+    String str = (String) obj;  // 명시적 캐스팅 필요
+    System.out.println(str.length());
+}
+```
+
+**Kotlin**:
+```kotlin
+if (obj is String) {
+    println(obj.length)  // 자동으로 String 타입으로 캐스팅됨
+}
+```
+
+---
+
+### Java와의 호환성
+
+**중요**: Kotlin과 Java는 동일한 프로젝트에서 함께 사용 가능!
+
+```kotlin
+// Kotlin에서 Java 코드 호출
+val list = ArrayList<String>()  // Java의 ArrayList 사용
+list.add("Hello")
+
+// Java에서 Kotlin 코드 호출 가능
+// MyKotlinClass.kt의 함수를 Java에서 호출
+```
+
+---
+
+## 1.3 Kotlin의 특징과 장점
+
+### 1. 표현력이 뛰어남 (Expressive)
+
+**예시: when 표현식**
+```kotlin
+fun getDescription(status: Int) = when (status) {
+    200 -> "OK"
+    404 -> "Not Found"
+    500 -> "Server Error"
+    in 100..199 -> "Informational"
+    in 300..399 -> "Redirection"
+    else -> "Unknown"
+}
+```
+
+### 2. 안전성 (Safety)
+
+#### Null 안전성
+```kotlin
+var name: String = "Kotlin"
+name = null  // 컴파일 에러!
+
+var nullableName: String? = "Kotlin"
+nullableName = null  // OK
+```
+
+#### 타입 안전성
+```kotlin
+val number: Int = "123".toIntOrNull() ?: 0  // 안전한 변환
+```
+
+### 3. 상호운용성 (Interoperability)
+
+```kotlin
+// Java 라이브러리를 그대로 사용
+import java.util.Date
+import java.time.LocalDateTime
+
+val now = LocalDateTime.now()
+val date = Date()
+```
+
+### 4. 도구 지원 (Tooling)
+
+- **IntelliJ IDEA**: 최고의 IDE 지원 (JetBrains 제작)
+- **Android Studio**: 공식 지원
+- **자동 변환**: Java → Kotlin 자동 변환 기능
+- **디버깅**: Java와 동일한 디버깅 경험
+
+---
+
+## 1.4 개발 환경 설정 (IntelliJ IDEA)
+
+### Step 1: IntelliJ IDEA 설치
+
+1. [JetBrains 공식 사이트](https://www.jetbrains.com/idea/download/)에서 다운로드
+   - **Community Edition** (무료) - 충분함
+   - **Ultimate Edition** (유료) - Spring 개발 시 편리
+
+2. 설치 후 실행
+
+### Step 2: Kotlin 플러그인 확인
+
+IntelliJ IDEA는 Kotlin 플러그인이 기본 내장되어 있습니다.
+
+**확인 방법**:
+```
+Preferences (Settings) → Plugins → Installed → Kotlin 확인
+```
+
+### Step 3: 첫 Kotlin 프로젝트 생성
+
+1. **New Project** 클릭
+2. 왼쪽 메뉴에서 **Kotlin** 선택
+3. **JVM | IDEA** 선택
+4. 프로젝트 설정:
+   ```
+   Name: kotlin-hello
+   Location: 원하는 경로
+   Build System: Gradle (Kotlin DSL) 추천
+   JDK: 17 이상 선택
+   ```
+5. **Create** 클릭
+
+### Step 4: 프로젝트 구조
+
+```
+kotlin-hello/
+├── src/
+│   ├── main/
+│   │   └── kotlin/        ← Kotlin 소스 파일
+│   └── test/
+│       └── kotlin/        ← 테스트 파일
+├── build.gradle.kts       ← Gradle 빌드 설정 (Kotlin DSL)
+└── settings.gradle.kts
+```
+
+### Step 5: JDK 설정 확인
+
+**File → Project Structure → Project**
+- SDK: Java 17 이상
+- Language level: 17
+
+---
+
+## 1.5 첫 번째 Kotlin 프로그램
+
+### Hello World 작성하기
+
+#### 1. 파일 생성
+`src/main/kotlin/Main.kt` 파일 생성
+
+#### 2. 코드 작성
+```kotlin
+fun main() {
+    println("Hello, Kotlin!")
+}
+```
+
+#### 3. 실행
+- `main()` 함수 왼쪽의 녹색 실행 버튼 클릭
+- 또는 `Ctrl + Shift + R` (Mac: `Cmd + Shift + R`)
+
+#### 4. 결과
+```
+Hello, Kotlin!
+```
+
+---
+
+### Java와 비교
+
+**Java 코드**:
+```java
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, Java!");
+    }
+}
+```
+
+**Kotlin 코드**:
+```kotlin
+fun main() {
+    println("Hello, Kotlin!")
+}
+```
+
+**차이점**:
+1. ✅ 클래스 불필요 (top-level 함수 지원)
+2. ✅ `public static` 키워드 불필요
+3. ✅ `String[] args` 생략 가능 (필요시 `args: Array<String>` 추가)
+4. ✅ `System.out.println` 대신 간단히 `println`
+5. ✅ 세미콜론(`;`) 생략 가능
+
+---
+
+### 더 많은 예제
+
+#### 예제 1: 변수 사용
+```kotlin
+fun main() {
+    val name = "Kotlin"  // 불변 변수
+    val version = 1.9    // 타입 추론
+
+    println("Welcome to $name $version")
+}
+```
+
+**출력**:
+```
+Welcome to Kotlin 1.9
+```
+
+#### 예제 2: 함수 정의
+```kotlin
+fun greet(name: String): String {
+    return "Hello, $name!"
+}
+
+fun main() {
+    val message = greet("Developer")
+    println(message)
+}
+```
+
+**출력**:
+```
+Hello, Developer!
+```
+
+#### 예제 3: 리스트 다루기
+```kotlin
+fun main() {
+    val languages = listOf("Java", "Kotlin", "Python")
+
+    for (lang in languages) {
+        println("I love $lang")
+    }
+}
+```
+
+**출력**:
+```
+I love Java
+I love Kotlin
+I love Python
+```
+
+---
+
+## Java 개발자를 위한 팁
+
+### 1. 자동 변환 활용하기
+기존 Java 코드를 복사해서 Kotlin 파일에 붙여넣으면 **자동으로 Kotlin 코드로 변환**됩니다!
+
+**방법**:
+- Java 코드 복사 → Kotlin 파일에 붙여넣기
+- 또는 `Code → Convert Java File to Kotlin File`
+
+### 2. 학습 순서 추천
+1. ✅ 기본 문법 익히기 (변수, 함수, 제어문)
+2. ✅ Null 안전성 이해하기
+3. ✅ 클래스와 데이터 클래스
+4. ✅ 컬렉션 처리
+5. ✅ 람다와 고차 함수
+6. ✅ 코루틴 (비동기)
+7. ✅ Spring Boot 통합
+
+### 3. 자주 참고할 리소스
+- [Kotlin 공식 문서](https://kotlinlang.org/docs/home.html)
+- [Kotlin Playground](https://play.kotlinlang.org/) - 브라우저에서 바로 실행
+- [Java to Kotlin 가이드](https://kotlinlang.org/docs/java-to-kotlin-idioms-strings.html)
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: Java 프로젝트에 점진적 도입
+기존 Java 프로젝트에 Kotlin을 점진적으로 도입할 수 있습니다.
+```
+1. 새로운 기능은 Kotlin으로 작성
+2. 리팩토링 시 Java → Kotlin 변환
+3. 테스트 코드부터 Kotlin으로 작성 시작
+```
+
+### 💡 Tip 2: REPL 활용
+빠르게 코드를 테스트하고 싶다면 **Kotlin REPL** 사용
+```
+Tools → Kotlin → Kotlin REPL
+```
+
+### 💡 Tip 3: 코드 스타일 가이드
+Kotlin 공식 스타일 가이드를 따르세요:
+- [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
+
+IntelliJ IDEA 설정:
+```
+Settings → Editor → Code Style → Kotlin
+→ "Set from..." → Kotlin style guide
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: Hello World 변형
+자신의 이름을 출력하는 프로그램을 작성하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val myName = "홍길동"
+    println("안녕하세요, 저는 ${myName}입니다!")
+}
+```
+</details>
+
+### 문제 2: 간단한 계산기
+두 숫자를 더하는 함수를 작성하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun add(a: Int, b: Int): Int {
+    return a + b
+}
+
+fun main() {
+    val result = add(10, 20)
+    println("10 + 20 = $result")
+}
+```
+</details>
+
+### 문제 3: 리스트 출력
+좋아하는 프로그래밍 언어 3개를 리스트로 만들어 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val languages = listOf("Kotlin", "Java", "TypeScript")
+
+    println("내가 좋아하는 언어들:")
+    for (lang in languages) {
+        println("- $lang")
+    }
+}
+```
+</details>
+
+---
+
+## 다음 챕터 예고
+
+Chapter 2에서는 Kotlin의 **기본 문법**을 상세히 다룹니다:
+- 변수 선언 (val vs var)
+- 기본 타입
+- 타입 추론
+- 문자열 템플릿
+
+Java의 기초를 알고 있다면 빠르게 익힐 수 있습니다!
+
+---
+
+[다음: Chapter 2. 기본 문법 →](chapter2-basic-syntax.md)

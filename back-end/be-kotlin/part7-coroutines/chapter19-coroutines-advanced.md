@@ -1,0 +1,719 @@
+# Chapter 19. 코루틴 심화
+
+## 개요
+
+이 챕터에서는 코루틴의 고급 기능을 다룹니다: Job 관리, Dispatcher, 예외 처리, Channel, Flow 등
+
+---
+
+## 19.1 Job과 취소
+
+### Job이란?
+
+**Job**: 코루틴의 생명주기를 나타내는 객체
+
+```kotlin
+val job = launch {
+    repeat(1000) { i ->
+        println("Job: I'm sleeping $i...")
+        delay(500)
+    }
+}
+
+delay(1300)  // 조금 기다림
+println("Cancelling job...")
+job.cancel()  // Job 취소
+job.join()    // 취소 완료 대기
+println("Job cancelled successfully")
+```
+
+---
+
+### 취소 가능한 코루틴
+
+```kotlin
+// ✅ 취소 가능 (delay 사용)
+val job1 = launch {
+    repeat(1000) { i ->
+        delay(500)  // 취소 체크 포인트
+        println("Job 1: $i")
+    }
+}
+
+// ❌ 취소 불가능 (CPU 집약적 작업)
+val job2 = launch {
+    var nextPrintTime = System.currentTimeMillis()
+    var i = 0
+    while (i < 5) {  // 취소 체크 안 함
+        if (System.currentTimeMillis() >= nextPrintTime) {
+            println("Job 2: I'm sleeping ${i++}...")
+            nextPrintTime += 500
+        }
+    }
+}
+
+// ✅ 취소 가능하게 만들기
+val job3 = launch {
+    var i = 0
+    while (isActive) {  // 취소 상태 확인
+        if (System.currentTimeMillis() >= nextPrintTime) {
+            println("Job 3: $i")
+            nextPrintTime += 500
+            i++
+        }
+    }
+}
+```
+
+---
+
+### 리소스 정리
+
+```kotlin
+val job = launch {
+    try {
+        repeat(1000) { i ->
+            println("Sleeping $i...")
+            delay(500)
+        }
+    } finally {
+        println("Cleaning up...")
+        // 리소스 정리
+    }
+}
+
+delay(1300)
+job.cancelAndJoin()  // cancel + join
+println("Done")
+```
+
+---
+
+## 19.2 async와 await
+
+### 병렬 실행과 결과 수집
+
+```kotlin
+import kotlin.system.measureTimeMillis
+
+suspend fun doSomethingUsefulOne(): Int {
+    delay(1000)
+    return 13
+}
+
+suspend fun doSomethingUsefulTwo(): Int {
+    delay(1000)
+    return 29
+}
+
+// ❌ 순차 실행 (2000ms)
+suspend fun sequential() {
+    val one = doSomethingUsefulOne()
+    val two = doSomethingUsefulTwo()
+    println("Result: ${one + two}")
+}
+
+// ✅ 병렬 실행 (1000ms)
+suspend fun concurrent() = coroutineScope {
+    val one = async { doSomethingUsefulOne() }
+    val two = async { doSomethingUsefulTwo() }
+    println("Result: ${one.await() + two.await()}")
+}
+
+fun main() = runBlocking {
+    val time1 = measureTimeMillis { sequential() }
+    println("Sequential took: ${time1}ms")
+
+    val time2 = measureTimeMillis { concurrent() }
+    println("Concurrent took: ${time2}ms")
+}
+```
+
+---
+
+### Lazy async
+
+```kotlin
+suspend fun lazyAsync() = coroutineScope {
+    val one = async(start = CoroutineStart.LAZY) {
+        println("Computing one...")
+        doSomethingUsefulOne()
+    }
+
+    val two = async(start = CoroutineStart.LAZY) {
+        println("Computing two...")
+        doSomethingUsefulTwo()
+    }
+
+    println("Initialized")
+    one.start()  // 시작
+    two.start()
+    println("Result: ${one.await() + two.await()}")
+}
+```
+
+---
+
+## 19.3 Dispatcher (IO, Default, Main)
+
+### Dispatcher 종류
+
+| Dispatcher | 용도 | 스레드 |
+|------------|------|--------|
+| `Dispatchers.Default` | CPU 집약적 작업 | CPU 코어 수 |
+| `Dispatchers.IO` | I/O 작업 | 최대 64개 |
+| `Dispatchers.Main` | UI 업데이트 | 메인 스레드 |
+| `Dispatchers.Unconfined` | 제한 없음 | 호출한 스레드 |
+
+---
+
+### withContext - Dispatcher 전환
+
+```kotlin
+suspend fun fetchDataFromNetwork(): String = withContext(Dispatchers.IO) {
+    // 네트워크 I/O
+    delay(1000)
+    "Data from network"
+}
+
+suspend fun processData(data: String): String = withContext(Dispatchers.Default) {
+    // CPU 집약적 처리
+    delay(500)
+    data.uppercase()
+}
+
+fun main() = runBlocking {
+    val data = fetchDataFromNetwork()  // IO
+    val processed = processData(data)  // Default
+    println(processed)  // Main
+}
+```
+
+---
+
+### 실전 예제
+
+```kotlin
+class UserRepository {
+    suspend fun fetchUser(id: Long): User = withContext(Dispatchers.IO) {
+        // 데이터베이스 또는 네트워크 I/O
+        delay(1000)
+        User(id, "User $id")
+    }
+}
+
+class UserService(private val repository: UserRepository) {
+    suspend fun loadUser(id: Long): UserDto = withContext(Dispatchers.Default) {
+        val user = repository.fetchUser(id)  // IO에서 실행
+        // CPU 집약적 변환
+        UserDto(user.id, user.name.uppercase())
+    }
+}
+```
+
+---
+
+## 19.4 예외 처리
+
+### try-catch
+
+```kotlin
+suspend fun failingFunction() {
+    throw RuntimeException("Something went wrong!")
+}
+
+fun main() = runBlocking {
+    try {
+        failingFunction()
+    } catch (e: Exception) {
+        println("Caught: ${e.message}")
+    }
+}
+```
+
+---
+
+### launch의 예외
+
+```kotlin
+fun main() = runBlocking {
+    val job = launch {
+        try {
+            repeat(1000) { i ->
+                println("Sleeping $i...")
+                delay(500)
+            }
+        } catch (e: Exception) {
+            println("Caught in launch: ${e.message}")
+        }
+    }
+
+    delay(1300)
+    job.cancelAndJoin()
+}
+```
+
+---
+
+### async의 예외
+
+```kotlin
+fun main() = runBlocking {
+    val deferred = async {
+        throw ArithmeticException("Division by zero")
+    }
+
+    try {
+        deferred.await()  // 여기서 예외 발생
+    } catch (e: ArithmeticException) {
+        println("Caught: ${e.message}")
+    }
+}
+```
+
+---
+
+### CoroutineExceptionHandler
+
+```kotlin
+val handler = CoroutineExceptionHandler { _, exception ->
+    println("Caught: $exception")
+}
+
+fun main() = runBlocking {
+    val job = GlobalScope.launch(handler) {
+        throw AssertionError("Error!")
+    }
+
+    job.join()
+}
+```
+
+---
+
+## 19.5 Channel
+
+### 기본 사용법
+
+```kotlin
+fun main() = runBlocking {
+    val channel = Channel<Int>()
+
+    launch {
+        for (x in 1..5) {
+            channel.send(x * x)  // 송신
+        }
+        channel.close()  // 채널 닫기
+    }
+
+    for (y in channel) {  // 수신
+        println(y)
+    }
+}
+// 출력: 1, 4, 9, 16, 25
+```
+
+---
+
+### produce 빌더
+
+```kotlin
+fun CoroutineScope.produceSquares() = produce {
+    for (x in 1..5) {
+        send(x * x)
+    }
+}
+
+fun main() = runBlocking {
+    val squares = produceSquares()
+    squares.consumeEach { println(it) }
+}
+```
+
+---
+
+### 파이프라인
+
+```kotlin
+fun CoroutineScope.produceNumbers() = produce {
+    var x = 1
+    while (true) {
+        send(x++)
+    }
+}
+
+fun CoroutineScope.square(numbers: ReceiveChannel<Int>) = produce {
+    for (x in numbers) {
+        send(x * x)
+    }
+}
+
+fun main() = runBlocking {
+    val numbers = produceNumbers()
+    val squares = square(numbers)
+
+    repeat(5) {
+        println(squares.receive())
+    }
+
+    coroutineContext.cancelChildren()
+}
+```
+
+---
+
+## 19.6 Flow
+
+### 기본 사용법
+
+```kotlin
+fun simpleFlow() = flow {
+    for (i in 1..3) {
+        delay(100)
+        emit(i)  // 값 방출
+    }
+}
+
+fun main() = runBlocking {
+    simpleFlow().collect { value ->
+        println(value)
+    }
+}
+// 출력: 1, 2, 3
+```
+
+---
+
+### Flow는 Cold Stream
+
+```kotlin
+fun main() = runBlocking {
+    val flow = flow {
+        println("Flow started")
+        for (i in 1..3) {
+            delay(100)
+            emit(i)
+        }
+    }
+
+    println("Calling collect...")
+    flow.collect { println(it) }  // 여기서 시작
+
+    println("Calling collect again...")
+    flow.collect { println(it) }  // 다시 시작
+}
+```
+
+---
+
+### Flow 변환 연산자
+
+```kotlin
+fun main() = runBlocking {
+    (1..5).asFlow()
+        .filter { it % 2 == 0 }  // 짝수만
+        .map { it * it }         // 제곱
+        .collect { println(it) }
+}
+// 출력: 4, 16
+```
+
+---
+
+### Flow 빌더
+
+```kotlin
+// flowOf
+val numbersFlow = flowOf(1, 2, 3, 4, 5)
+
+// asFlow
+val listFlow = listOf(1, 2, 3).asFlow()
+
+// flow 빌더
+val customFlow = flow {
+    emit(1)
+    delay(100)
+    emit(2)
+}
+```
+
+---
+
+### Flow 예외 처리
+
+```kotlin
+fun main() = runBlocking {
+    flow {
+        emit(1)
+        throw RuntimeException("Error!")
+    }.catch { e ->
+        println("Caught: ${e.message}")
+        emit(-1)  // 기본값 방출
+    }.collect {
+        println(it)
+    }
+}
+// 출력: 1, Caught: Error!, -1
+```
+
+---
+
+### Flow 완료 처리
+
+```kotlin
+fun main() = runBlocking {
+    (1..3).asFlow()
+        .onEach { println("Emitting $it") }
+        .collect { println("Collected $it") }
+        .also { println("Done") }
+}
+```
+
+---
+
+### 실전 예제: 실시간 데이터
+
+```kotlin
+class StockPriceRepository {
+    fun observePrices(symbol: String): Flow<Double> = flow {
+        while (true) {
+            val price = fetchCurrentPrice(symbol)
+            emit(price)
+            delay(1000)  // 1초마다
+        }
+    }
+
+    private suspend fun fetchCurrentPrice(symbol: String): Double {
+        delay(100)
+        return (100..200).random().toDouble()
+    }
+}
+
+fun main() = runBlocking {
+    val repository = StockPriceRepository()
+
+    repository.observePrices("AAPL")
+        .take(5)  // 처음 5개만
+        .collect { price ->
+            println("Price: $$price")
+        }
+}
+```
+
+---
+
+## 19.7 Java CompletableFuture와 비교
+
+### CompletableFuture → 코루틴
+
+**Java**:
+```java
+CompletableFuture<User> fetchUser(Long id) {
+    return CompletableFuture.supplyAsync(() -> {
+        // ...
+    });
+}
+
+CompletableFuture<Orders> fetchOrders(Long userId) {
+    return CompletableFuture.supplyAsync(() -> {
+        // ...
+    });
+}
+
+CompletableFuture<Result> process(Long id) {
+    return fetchUser(id)
+        .thenCompose(user -> fetchOrders(user.getId()))
+        .thenApply(orders -> new Result(user, orders));
+}
+```
+
+**Kotlin**:
+```kotlin
+suspend fun fetchUser(id: Long): User {
+    // ...
+}
+
+suspend fun fetchOrders(userId: Long): Orders {
+    // ...
+}
+
+suspend fun process(id: Long): Result {
+    val user = fetchUser(id)
+    val orders = fetchOrders(user.id)
+    return Result(user, orders)
+}
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 적절한 Dispatcher 선택
+
+```kotlin
+// ✅ I/O 작업
+suspend fun saveToDatabase(data: Data) = withContext(Dispatchers.IO) {
+    database.save(data)
+}
+
+// ✅ CPU 집약적 작업
+suspend fun processImage(image: Image) = withContext(Dispatchers.Default) {
+    // 이미지 처리
+}
+
+// ✅ UI 업데이트 (Android)
+suspend fun updateUI(data: Data) = withContext(Dispatchers.Main) {
+    textView.text = data.toString()
+}
+```
+
+---
+
+### 💡 Tip 2: Flow로 반응형 프로그래밍
+
+```kotlin
+class UserRepository {
+    private val _users = MutableStateFlow<List<User>>(emptyList())
+    val users: StateFlow<List<User>> = _users
+
+    suspend fun refresh() {
+        val newUsers = fetchUsersFromApi()
+        _users.value = newUsers
+    }
+}
+
+// 사용
+viewModelScope.launch {
+    repository.users.collect { users ->
+        updateUI(users)
+    }
+}
+```
+
+---
+
+### 💡 Tip 3: 구조화된 동시성 유지
+
+```kotlin
+// ✅ coroutineScope
+suspend fun loadData() = coroutineScope {
+    val data1 = async { fetchData1() }
+    val data2 = async { fetchData2() }
+
+    combine(data1.await(), data2.await())
+}  // 모든 자식이 완료될 때까지 대기
+
+// ❌ GlobalScope
+suspend fun loadDataBad() {
+    GlobalScope.launch {
+        val data = fetchData()
+        // 언제 끝날지 알 수 없음!
+    }
+}
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 병렬 다운로드
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+suspend fun downloadFile(id: Int): String {
+    delay(1000)
+    return "File $id"
+}
+
+suspend fun downloadAll(ids: List<Int>) = coroutineScope {
+    ids.map { id ->
+        async { downloadFile(id) }
+    }.awaitAll()
+}
+
+fun main() = runBlocking {
+    val ids = listOf(1, 2, 3, 4, 5)
+    val time = measureTimeMillis {
+        val files = downloadAll(ids)
+        println(files)
+    }
+    println("Downloaded in ${time}ms")
+}
+```
+</details>
+
+### 문제 2: Flow로 카운터
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun counter(): Flow<Int> = flow {
+    var count = 0
+    while (true) {
+        emit(count++)
+        delay(1000)
+    }
+}
+
+fun main() = runBlocking {
+    counter()
+        .take(5)
+        .collect { println("Count: $it") }
+}
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **Job**
+   - 코루틴 생명주기
+   - `cancel()`, `join()`
+
+2. **async/await**
+   - 병렬 실행
+   - 결과 반환
+
+3. **Dispatcher**
+   - IO, Default, Main
+   - `withContext`
+
+4. **예외 처리**
+   - try-catch
+   - CoroutineExceptionHandler
+
+5. **Flow**
+   - Cold stream
+   - 변환 연산자
+   - 예외 처리
+
+---
+
+## Part 7 완료!
+
+Part 7: 코루틴과 비동기 프로그래밍을 모두 마쳤습니다!
+
+**배운 내용**:
+- ✅ Chapter 18: 코루틴 기초
+- ✅ Chapter 19: 코루틴 심화
+
+---
+
+## 다음 Part 예고
+
+**Part 8: Kotlin과 Spring Boot**에서 다룰 내용:
+- Chapter 20: Spring Boot 프로젝트 설정
+- Chapter 21: Spring과 Kotlin 통합
+- Chapter 22: Spring Data JPA
+- Chapter 23: REST API 개발
+- Chapter 24: 코루틴과 WebFlux
+
+---
+
+[← 이전: Chapter 18. 코루틴 기초](chapter18-coroutines-basics.md) | [다음: Chapter 20. Spring Boot 프로젝트 설정 →](../part8-spring/chapter20-spring-setup.md)

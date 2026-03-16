@@ -1,0 +1,682 @@
+# Chapter 17. 고급 컬렉션 연산
+
+## 개요
+
+Kotlin의 컬렉션 연산은 매우 강력하며, 함수형 프로그래밍 스타일로 데이터를 처리할 수 있게 해줍니다. 이 챕터에서는 실전에서 자주 사용하는 고급 연산을 다룹니다.
+
+---
+
+## 17.1 변환 연산 (map, flatMap)
+
+### map - 각 요소 변환
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+val squared = numbers.map { it * it }
+println(squared)  // [1, 4, 9, 16, 25]
+
+val strings = numbers.map { "Number: $it" }
+println(strings)
+// [Number: 1, Number: 2, Number: 3, Number: 4, Number: 5]
+```
+
+---
+
+### mapIndexed - 인덱스와 함께
+
+```kotlin
+val fruits = listOf("apple", "banana", "cherry")
+
+val indexed = fruits.mapIndexed { index, fruit ->
+    "$index: $fruit"
+}
+println(indexed)
+// [0: apple, 1: banana, 2: cherry]
+```
+
+---
+
+### mapNotNull - null 제거하며 변환
+
+```kotlin
+val strings = listOf("1", "2", "abc", "3", "def")
+
+val numbers = strings.mapNotNull { it.toIntOrNull() }
+println(numbers)  // [1, 2, 3]
+```
+
+---
+
+### flatMap - 중첩 컬렉션 평탄화
+
+```kotlin
+val numbers = listOf(1, 2, 3)
+
+val duplicated = numbers.flatMap { listOf(it, it) }
+println(duplicated)  // [1, 1, 2, 2, 3, 3]
+
+// 실전 예제: 여러 사용자의 주문 목록
+data class User(val name: String, val orders: List<String>)
+
+val users = listOf(
+    User("Alice", listOf("Order1", "Order2")),
+    User("Bob", listOf("Order3")),
+    User("Charlie", listOf("Order4", "Order5", "Order6"))
+)
+
+val allOrders = users.flatMap { it.orders }
+println(allOrders)
+// [Order1, Order2, Order3, Order4, Order5, Order6]
+```
+
+---
+
+## 17.2 필터링 (filter, filterNot, partition)
+
+### filter - 조건에 맞는 요소만
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+val evens = numbers.filter { it % 2 == 0 }
+println(evens)  // [2, 4, 6, 8, 10]
+
+val greaterThan5 = numbers.filter { it > 5 }
+println(greaterThan5)  // [6, 7, 8, 9, 10]
+```
+
+---
+
+### filterNot - 조건에 맞지 않는 요소만
+
+```kotlin
+val odds = numbers.filterNot { it % 2 == 0 }
+println(odds)  // [1, 3, 5, 7, 9]
+```
+
+---
+
+### filterIsInstance - 특정 타입만
+
+```kotlin
+val mixed: List<Any> = listOf(1, "two", 3, "four", 5.0)
+
+val strings = mixed.filterIsInstance<String>()
+println(strings)  // [two, four]
+
+val numbers = mixed.filterIsInstance<Int>()
+println(numbers)  // [1, 3]
+```
+
+---
+
+### partition - 두 그룹으로 분리
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+val (evens, odds) = numbers.partition { it % 2 == 0 }
+println("Evens: $evens")  // [2, 4, 6, 8, 10]
+println("Odds: $odds")    // [1, 3, 5, 7, 9]
+```
+
+---
+
+## 17.3 집계 연산 (reduce, fold)
+
+### reduce - 누적 계산
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+val sum = numbers.reduce { acc, n -> acc + n }
+println(sum)  // 15
+
+val product = numbers.reduce { acc, n -> acc * n }
+println(product)  // 120
+```
+
+---
+
+### fold - 초기값과 함께 누적
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+val sum = numbers.fold(0) { acc, n -> acc + n }
+println(sum)  // 15
+
+val sumWith100 = numbers.fold(100) { acc, n -> acc + n }
+println(sumWith100)  // 115
+
+// 다른 타입으로 변환
+val concatenated = numbers.fold("") { acc, n -> "$acc$n" }
+println(concatenated)  // 12345
+```
+
+---
+
+### 실전 예제: 복잡한 집계
+
+```kotlin
+data class Order(val items: List<OrderItem>)
+data class OrderItem(val name: String, val price: Double, val quantity: Int)
+
+val orders = listOf(
+    Order(listOf(
+        OrderItem("Apple", 1.0, 3),
+        OrderItem("Banana", 0.5, 5)
+    )),
+    Order(listOf(
+        OrderItem("Orange", 0.8, 2)
+    ))
+)
+
+// 모든 주문의 총액
+val totalAmount = orders.fold(0.0) { total, order ->
+    total + order.items.fold(0.0) { orderTotal, item ->
+        orderTotal + (item.price * item.quantity)
+    }
+}
+println("Total: $$totalAmount")  // Total: $7.1
+```
+
+---
+
+## 17.4 그룹화와 분할 (groupBy, chunked)
+
+### groupBy - 키로 그룹화
+
+```kotlin
+val words = listOf("apple", "banana", "avocado", "blueberry", "apricot", "cherry")
+
+// 첫 글자로 그룹화
+val grouped = words.groupBy { it.first() }
+println(grouped)
+// {a=[apple, avocado, apricot], b=[banana, blueberry], c=[cherry]}
+
+// 길이로 그룹화
+val byLength = words.groupBy { it.length }
+println(byLength)
+// {5=[apple], 6=[banana, cherry], 7=[avocado], 9=[blueberry], 7=[apricot]}
+```
+
+---
+
+### groupingBy - 고급 그룹화
+
+```kotlin
+val words = listOf("apple", "banana", "avocado", "blueberry", "apricot")
+
+// 각 그룹의 개수
+val counts = words.groupingBy { it.first() }.eachCount()
+println(counts)  // {a=3, b=2}
+
+// 각 그룹의 합계
+data class Product(val category: String, val price: Double)
+
+val products = listOf(
+    Product("Electronics", 100.0),
+    Product("Electronics", 200.0),
+    Product("Books", 15.0),
+    Product("Books", 25.0)
+)
+
+val totalByCategory = products.groupingBy { it.category }
+    .fold(0.0) { acc, product -> acc + product.price }
+println(totalByCategory)
+// {Electronics=300.0, Books=40.0}
+```
+
+---
+
+### chunked - 고정 크기로 분할
+
+```kotlin
+val numbers = (1..10).toList()
+
+val chunks = numbers.chunked(3)
+println(chunks)
+// [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]
+
+// 변환과 함께
+val sums = numbers.chunked(3) { it.sum() }
+println(sums)  // [6, 15, 24, 10]
+```
+
+---
+
+### windowed - 슬라이딩 윈도우
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+val windows = numbers.windowed(3)
+println(windows)
+// [[1, 2, 3], [2, 3, 4], [3, 4, 5]]
+
+// step 지정
+val stepped = numbers.windowed(3, step = 2)
+println(stepped)
+// [[1, 2, 3], [3, 4, 5]]
+
+// 변환과 함께
+val averages = numbers.windowed(3) { it.average() }
+println(averages)  // [2.0, 3.0, 4.0]
+```
+
+---
+
+## 17.5 정렬 (sortedBy, sortedWith)
+
+### sorted - 기본 정렬
+
+```kotlin
+val numbers = listOf(3, 1, 4, 1, 5, 9, 2, 6)
+
+println(numbers.sorted())  // [1, 1, 2, 3, 4, 5, 6, 9]
+println(numbers.sortedDescending())  // [9, 6, 5, 4, 3, 2, 1, 1]
+```
+
+---
+
+### sortedBy - 특정 속성으로 정렬
+
+```kotlin
+data class Person(val name: String, val age: Int)
+
+val people = listOf(
+    Person("Charlie", 30),
+    Person("Alice", 25),
+    Person("Bob", 35)
+)
+
+val byName = people.sortedBy { it.name }
+println(byName)
+// [Person(name=Alice, age=25), Person(name=Bob, age=35), Person(name=Charlie, age=30)]
+
+val byAge = people.sortedByDescending { it.age }
+println(byAge)
+// [Person(name=Bob, age=35), Person(name=Charlie, age=30), Person(name=Alice, age=25)]
+```
+
+---
+
+### sortedWith - 커스텀 비교
+
+```kotlin
+data class Person(val name: String, val age: Int)
+
+val people = listOf(
+    Person("Alice", 30),
+    Person("Bob", 25),
+    Person("Alice", 25)
+)
+
+// 여러 기준으로 정렬
+val sorted = people.sortedWith(
+    compareBy<Person> { it.name }.thenBy { it.age }
+)
+println(sorted)
+// [Person(name=Alice, age=25), Person(name=Alice, age=30), Person(name=Bob, age=25)]
+
+// 역순 포함
+val sorted2 = people.sortedWith(
+    compareBy<Person> { it.name }.thenByDescending { it.age }
+)
+println(sorted2)
+// [Person(name=Alice, age=30), Person(name=Alice, age=25), Person(name=Bob, age=25)]
+```
+
+---
+
+## 17.6 Java Stream API와 비교
+
+### 변환 연산
+
+**Java**:
+```java
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+
+List<Integer> squared = numbers.stream()
+    .map(n -> n * n)
+    .collect(Collectors.toList());
+
+List<String> allOrders = users.stream()
+    .flatMap(user -> user.getOrders().stream())
+    .collect(Collectors.toList());
+```
+
+**Kotlin**:
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+val squared = numbers.map { it * it }
+
+val allOrders = users.flatMap { it.orders }
+```
+
+---
+
+### 그룹화
+
+**Java**:
+```java
+Map<Character, List<String>> grouped = words.stream()
+    .collect(Collectors.groupingBy(s -> s.charAt(0)));
+
+Map<String, Long> counts = words.stream()
+    .collect(Collectors.groupingBy(
+        Function.identity(),
+        Collectors.counting()
+    ));
+```
+
+**Kotlin**:
+```kotlin
+val grouped = words.groupBy { it.first() }
+
+val counts = words.groupingBy { it }.eachCount()
+```
+
+---
+
+## 실전 예제
+
+### 예제 1: 판매 데이터 분석
+
+```kotlin
+data class Sale(
+    val product: String,
+    val category: String,
+    val amount: Double,
+    val date: String
+)
+
+val sales = listOf(
+    Sale("Laptop", "Electronics", 1200.0, "2024-01"),
+    Sale("Mouse", "Electronics", 25.0, "2024-01"),
+    Sale("Book", "Books", 15.0, "2024-01"),
+    Sale("Phone", "Electronics", 800.0, "2024-02"),
+    Sale("Pen", "Stationery", 2.0, "2024-02")
+)
+
+// 1. 카테고리별 총 매출
+val totalByCategory = sales
+    .groupBy { it.category }
+    .mapValues { (_, sales) -> sales.sumOf { it.amount } }
+println(totalByCategory)
+// {Electronics=2025.0, Books=15.0, Stationery=2.0}
+
+// 2. 월별 평균 매출
+val avgByMonth = sales
+    .groupBy { it.date }
+    .mapValues { (_, sales) -> sales.map { it.amount }.average() }
+println(avgByMonth)
+// {2024-01=413.33..., 2024-02=401.0}
+
+// 3. 상위 3개 제품
+val top3 = sales
+    .sortedByDescending { it.amount }
+    .take(3)
+    .map { it.product }
+println(top3)  // [Laptop, Phone, Mouse]
+```
+
+---
+
+### 예제 2: 사용자 통계
+
+```kotlin
+data class User(val name: String, val age: Int, val city: String, val premium: Boolean)
+
+val users = listOf(
+    User("Alice", 25, "Seoul", true),
+    User("Bob", 30, "Seoul", false),
+    User("Charlie", 35, "Busan", true),
+    User("David", 28, "Seoul", true),
+    User("Eve", 22, "Busan", false)
+)
+
+// 1. 도시별 사용자 수
+val usersByCity = users.groupingBy { it.city }.eachCount()
+println(usersByCity)  // {Seoul=3, Busan=2}
+
+// 2. 프리미엄 사용자의 평균 나이
+val avgAgePremium = users
+    .filter { it.premium }
+    .map { it.age }
+    .average()
+println("Premium avg age: $avgAgePremium")  // 29.33...
+
+// 3. 도시별 프리미엄 비율
+val premiumRatioByCity = users
+    .groupBy { it.city }
+    .mapValues { (_, cityUsers) ->
+        val premiumCount = cityUsers.count { it.premium }
+        premiumCount.toDouble() / cityUsers.size * 100
+    }
+println(premiumRatioByCity)
+// {Seoul=66.66..., Busan=50.0}
+```
+
+---
+
+### 예제 3: 텍스트 분석
+
+```kotlin
+val text = """
+    Kotlin is a modern programming language.
+    Kotlin is concise and safe.
+    Programming in Kotlin is fun.
+""".trimIndent()
+
+// 1. 단어 빈도수
+val wordFrequency = text
+    .lowercase()
+    .split(Regex("\\W+"))
+    .filter { it.isNotBlank() }
+    .groupingBy { it }
+    .eachCount()
+    .toList()
+    .sortedByDescending { it.second }
+    .take(5)
+
+println("Top 5 words:")
+wordFrequency.forEach { (word, count) ->
+    println("$word: $count")
+}
+// kotlin: 3
+// is: 3
+// ...
+
+// 2. 평균 단어 길이
+val avgWordLength = text
+    .split(Regex("\\W+"))
+    .filter { it.isNotBlank() }
+    .map { it.length }
+    .average()
+println("Avg word length: $avgWordLength")
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 체이닝 vs 단계별
+
+```kotlin
+val numbers = (1..100).toList()
+
+// ✅ 체이닝 (한 번의 순회)
+val result1 = numbers
+    .filter { it % 2 == 0 }
+    .map { it * it }
+    .filter { it > 100 }
+    .take(5)
+
+// ❌ 단계별 (여러 번 순회)
+val evens = numbers.filter { it % 2 == 0 }
+val squared = evens.map { it * it }
+val filtered = squared.filter { it > 100 }
+val result2 = filtered.take(5)
+```
+
+---
+
+### 💡 Tip 2: Sequence 활용 (대용량 데이터)
+
+```kotlin
+val largeList = (1..1_000_000).toList()
+
+// ❌ 중간 컬렉션 생성 (메모리 많이 사용)
+val result1 = largeList
+    .filter { it % 2 == 0 }
+    .map { it * it }
+    .take(10)
+
+// ✅ Sequence 사용 (지연 평가)
+val result2 = largeList.asSequence()
+    .filter { it % 2 == 0 }
+    .map { it * it }
+    .take(10)
+    .toList()
+```
+
+---
+
+### 💡 Tip 3: 특화 함수 사용
+
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+// ❌ 일반 함수
+val sum1 = numbers.map { it }.sum()
+val max1 = numbers.map { it }.maxOrNull()
+
+// ✅ 특화 함수
+val sum2 = numbers.sum()
+val max2 = numbers.maxOrNull()
+
+// ✅ sumOf (변환 + 합계)
+data class Order(val amount: Double)
+val orders = listOf(Order(10.0), Order(20.0))
+val total = orders.sumOf { it.amount }
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 학생 성적 분석
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+data class Student(val name: String, val scores: List<Int>)
+
+val students = listOf(
+    Student("Alice", listOf(90, 85, 88)),
+    Student("Bob", listOf(70, 75, 72)),
+    Student("Charlie", listOf(95, 92, 98))
+)
+
+// 1. 평균 80점 이상 학생
+val topStudents = students.filter { it.scores.average() >= 80 }
+println("Top students: ${topStudents.map { it.name }}")
+
+// 2. 전체 평균
+val overallAverage = students
+    .flatMap { it.scores }
+    .average()
+println("Overall average: $overallAverage")
+
+// 3. 최고 점수 학생
+val topScorer = students.maxByOrNull { it.scores.average() }
+println("Top scorer: ${topScorer?.name}")
+```
+</details>
+
+### 문제 2: 주문 통계
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+data class Order(val customerId: String, val amount: Double, val items: Int)
+
+val orders = listOf(
+    Order("C001", 100.0, 3),
+    Order("C002", 200.0, 5),
+    Order("C001", 150.0, 2),
+    Order("C003", 50.0, 1),
+    Order("C002", 300.0, 8)
+)
+
+// 1. 고객별 총 구매액
+val totalByCustomer = orders
+    .groupBy { it.customerId }
+    .mapValues { (_, orders) -> orders.sumOf { it.amount } }
+println(totalByCustomer)
+
+// 2. 평균 주문 금액
+val avgOrderAmount = orders.map { it.amount }.average()
+println("Average order: $avgOrderAmount")
+
+// 3. 가장 많은 아이템을 구매한 주문
+val maxItemsOrder = orders.maxByOrNull { it.items }
+println("Max items order: $maxItemsOrder")
+
+// 4. 고객별 주문 수
+val orderCountByCustomer = orders.groupingBy { it.customerId }.eachCount()
+println(orderCountByCustomer)
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **변환**
+   - `map`, `flatMap`, `mapNotNull`
+
+2. **필터링**
+   - `filter`, `filterNot`, `partition`
+
+3. **집계**
+   - `reduce`, `fold`
+   - 특화 함수: `sum`, `average`, `count`
+
+4. **그룹화**
+   - `groupBy`, `groupingBy`
+   - `chunked`, `windowed`
+
+5. **정렬**
+   - `sortedBy`, `sortedWith`
+
+---
+
+## Part 6 완료!
+
+Part 6: 함수형 프로그래밍을 모두 마쳤습니다!
+
+**배운 내용**:
+- ✅ Chapter 15: 함수형 프로그래밍 개념
+- ✅ Chapter 16: 스코프 함수
+- ✅ Chapter 17: 고급 컬렉션 연산
+
+---
+
+## 다음 Part 예고
+
+**Part 7: 코루틴과 비동기 프로그래밍**에서 다룰 내용:
+- Chapter 18: 코루틴 기초
+- Chapter 19: 코루틴 심화
+
+---
+
+[← 이전: Chapter 16. 스코프 함수](chapter16-scope-functions.md) | [다음: Chapter 18. 코루틴 기초 →](../part7-coroutines/chapter18-coroutines-basics.md)

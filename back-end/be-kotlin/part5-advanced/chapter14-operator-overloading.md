@@ -1,0 +1,806 @@
+# Chapter 14. 연산자 오버로딩
+
+## 개요
+
+Kotlin에서는 **`operator`** 키워드를 사용하여 연산자를 오버로딩할 수 있습니다. 이를 통해 사용자 정의 타입에 대해 직관적인 연산을 제공할 수 있습니다.
+
+---
+
+## 14.1 연산자 오버로딩 기초
+
+### operator 키워드
+
+```kotlin
+data class Point(val x: Int, val y: Int) {
+    operator fun plus(other: Point): Point {
+        return Point(x + other.x, y + other.y)
+    }
+}
+
+fun main() {
+    val p1 = Point(10, 20)
+    val p2 = Point(30, 40)
+
+    val p3 = p1 + p2  // p1.plus(p2)와 동일
+    println(p3)  // Point(x=40, y=60)
+}
+```
+
+---
+
+### 지원되는 연산자
+
+Kotlin은 정해진 연산자만 오버로딩할 수 있습니다:
+- 산술: `+`, `-`, `*`, `/`, `%`
+- 복합 대입: `+=`, `-=`, `*=`, `/=`, `%=`
+- 단항: `+`, `-`, `!`, `++`, `--`
+- 비교: `>`, `<`, `>=`, `<=`
+- 인덱스: `[]`, `[]=`
+- 호출: `()`
+- 범위: `..`, `in`
+
+---
+
+## 14.2 산술 연산자
+
+### 기본 산술 연산
+
+```kotlin
+data class Vector(val x: Double, val y: Double) {
+    operator fun plus(other: Vector) = Vector(x + other.x, y + other.y)
+    operator fun minus(other: Vector) = Vector(x - other.x, y - other.y)
+    operator fun times(scalar: Double) = Vector(x * scalar, y * scalar)
+    operator fun div(scalar: Double) = Vector(x / scalar, y / scalar)
+
+    fun length() = kotlin.math.sqrt(x * x + y * y)
+}
+
+fun main() {
+    val v1 = Vector(3.0, 4.0)
+    val v2 = Vector(1.0, 2.0)
+
+    println(v1 + v2)  // Vector(x=4.0, y=6.0)
+    println(v1 - v2)  // Vector(x=2.0, y=2.0)
+    println(v1 * 2.0) // Vector(x=6.0, y=8.0)
+    println(v1 / 2.0) // Vector(x=1.5, y=2.0)
+
+    println("Length: ${v1.length()}")  // 5.0
+}
+```
+
+---
+
+### 단항 연산자
+
+```kotlin
+data class Point(val x: Int, val y: Int) {
+    operator fun unaryPlus() = this
+    operator fun unaryMinus() = Point(-x, -y)
+
+    operator fun inc() = Point(x + 1, y + 1)
+    operator fun dec() = Point(x - 1, y - 1)
+}
+
+fun main() {
+    val p = Point(10, 20)
+
+    println(+p)  // Point(x=10, y=20)
+    println(-p)  // Point(x=-10, y=-20)
+
+    var mutableP = Point(5, 5)
+    println(++mutableP)  // Point(x=6, y=6)
+    println(mutableP++)  // Point(x=6, y=6)
+    println(mutableP)    // Point(x=7, y=7)
+}
+```
+
+---
+
+### 복합 대입 연산자
+
+```kotlin
+data class Counter(var count: Int) {
+    operator fun plusAssign(value: Int) {
+        count += value
+    }
+
+    operator fun minusAssign(value: Int) {
+        count -= value
+    }
+}
+
+fun main() {
+    val counter = Counter(10)
+
+    counter += 5  // counter.plusAssign(5)
+    println(counter.count)  // 15
+
+    counter -= 3
+    println(counter.count)  // 12
+}
+```
+
+**주의**: `plus`와 `plusAssign`을 동시에 정의하지 마세요!
+
+```kotlin
+// ❌ 혼란스러움
+data class BadExample(var value: Int) {
+    operator fun plus(other: Int) = BadExample(value + other)
+    operator fun plusAssign(other: Int) { value += other }
+}
+
+// ✅ 불변 타입은 plus
+data class ImmutableExample(val value: Int) {
+    operator fun plus(other: Int) = ImmutableExample(value + other)
+}
+
+// ✅ 가변 타입은 plusAssign
+data class MutableExample(var value: Int) {
+    operator fun plusAssign(other: Int) { value += other }
+}
+```
+
+---
+
+## 14.3 비교 연산자
+
+### compareTo
+
+```kotlin
+data class Person(val name: String, val age: Int) : Comparable<Person> {
+    override fun compareTo(other: Person): Int {
+        return age.compareTo(other.age)
+    }
+}
+
+fun main() {
+    val alice = Person("Alice", 25)
+    val bob = Person("Bob", 30)
+
+    println(alice < bob)   // true
+    println(alice > bob)   // false
+    println(alice <= bob)  // true
+    println(alice >= bob)  // false
+}
+```
+
+---
+
+### equals (==)
+
+```kotlin
+data class Complex(val real: Double, val imaginary: Double) {
+    override fun equals(other: Any?): Boolean {
+        if (other !is Complex) return false
+        return real == other.real && imaginary == other.imaginary
+    }
+
+    override fun hashCode(): Int {
+        return 31 * real.hashCode() + imaginary.hashCode()
+    }
+}
+
+fun main() {
+    val c1 = Complex(1.0, 2.0)
+    val c2 = Complex(1.0, 2.0)
+    val c3 = Complex(2.0, 3.0)
+
+    println(c1 == c2)  // true
+    println(c1 == c3)  // false
+
+    println(c1 === c2)  // false (다른 객체)
+}
+```
+
+**참고**: `data class`는 자동으로 `equals`와 `hashCode`를 생성합니다.
+
+---
+
+## 14.4 인덱스 접근 연산자
+
+### get과 set
+
+```kotlin
+class Grid<T>(
+    private val width: Int,
+    private val height: Int,
+    private val default: T
+) {
+    private val data = MutableList(width * height) { default }
+
+    operator fun get(x: Int, y: Int): T {
+        require(x in 0 until width && y in 0 until height)
+        return data[y * width + x]
+    }
+
+    operator fun set(x: Int, y: Int, value: T) {
+        require(x in 0 until width && y in 0 until height)
+        data[y * width + x] = value
+    }
+}
+
+fun main() {
+    val grid = Grid(3, 3, 0)
+
+    grid[0, 0] = 1
+    grid[1, 1] = 5
+    grid[2, 2] = 9
+
+    println(grid[0, 0])  // 1
+    println(grid[1, 1])  // 5
+    println(grid[2, 2])  // 9
+}
+```
+
+---
+
+### 여러 인덱스
+
+```kotlin
+class Matrix(private val rows: Int, private val cols: Int) {
+    private val data = Array(rows) { IntArray(cols) }
+
+    operator fun get(row: Int, col: Int) = data[row][col]
+    operator fun set(row: Int, col: Int, value: Int) {
+        data[row][col] = value
+    }
+
+    // 여러 인덱스도 가능
+    operator fun get(vararg indices: Int): Int {
+        require(indices.size == 2)
+        return data[indices[0]][indices[1]]
+    }
+}
+
+fun main() {
+    val matrix = Matrix(3, 3)
+
+    matrix[0, 0] = 1
+    matrix[1, 1] = 5
+    matrix[2, 2] = 9
+
+    println(matrix[0, 0])  // 1
+    println(matrix[1, 1])  // 5
+}
+```
+
+---
+
+## 14.5 invoke 연산자
+
+### 호출 가능한 객체
+
+```kotlin
+class Greeter(private val greeting: String) {
+    operator fun invoke(name: String) = "$greeting, $name!"
+}
+
+class Sum {
+    operator fun invoke(a: Int, b: Int) = a + b
+    operator fun invoke(a: Int, b: Int, c: Int) = a + b + c
+}
+
+fun main() {
+    val greeter = Greeter("Hello")
+    println(greeter("Alice"))  // Hello, Alice!
+    println(greeter("Bob"))    // Hello, Bob!
+
+    val sum = Sum()
+    println(sum(1, 2))        // 3
+    println(sum(1, 2, 3))     // 6
+}
+```
+
+---
+
+### 실전 예제: 함수형 스타일
+
+```kotlin
+class Operation(private val op: (Int, Int) -> Int) {
+    operator fun invoke(a: Int, b: Int) = op(a, b)
+}
+
+fun main() {
+    val add = Operation { a, b -> a + b }
+    val multiply = Operation { a, b -> a * b }
+
+    println(add(3, 5))       // 8
+    println(multiply(3, 5))  // 15
+}
+```
+
+---
+
+### DSL에서 활용
+
+```kotlin
+class Html {
+    private val children = mutableListOf<String>()
+
+    operator fun String.unaryPlus() {
+        children.add(this)
+    }
+
+    override fun toString() = children.joinToString("")
+}
+
+fun html(init: Html.() -> Unit): Html {
+    val html = Html()
+    html.init()
+    return html
+}
+
+fun main() {
+    val page = html {
+        +"<html>"
+        +"<body>"
+        +"<h1>Hello</h1>"
+        +"</body>"
+        +"</html>"
+    }
+
+    println(page)
+    // <html><body><h1>Hello</h1></body></html>
+}
+```
+
+---
+
+## 14.6 기타 연산자
+
+### rangeTo (..)
+
+```kotlin
+data class Date(val year: Int, val month: Int, val day: Int) : Comparable<Date> {
+    override fun compareTo(other: Date): Int {
+        return when {
+            year != other.year -> year - other.year
+            month != other.month -> month - other.month
+            else -> day - other.day
+        }
+    }
+
+    operator fun rangeTo(other: Date) = DateRange(this, other)
+}
+
+class DateRange(
+    override val start: Date,
+    override val endInclusive: Date
+) : ClosedRange<Date>
+
+fun main() {
+    val start = Date(2024, 1, 1)
+    val end = Date(2024, 12, 31)
+
+    val range = start..end
+
+    val someDate = Date(2024, 6, 15)
+    println(someDate in range)  // true
+
+    val outsideDate = Date(2025, 1, 1)
+    println(outsideDate in range)  // false
+}
+```
+
+---
+
+### contains (in)
+
+```kotlin
+data class Rectangle(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+    operator fun contains(point: Point): Boolean {
+        return point.x in left..right && point.y in top..bottom
+    }
+}
+
+data class Point(val x: Int, val y: Int)
+
+fun main() {
+    val rect = Rectangle(0, 0, 100, 100)
+
+    val p1 = Point(50, 50)
+    val p2 = Point(150, 150)
+
+    println(p1 in rect)  // true
+    println(p2 in rect)  // false
+}
+```
+
+---
+
+### iterator
+
+```kotlin
+class Fibonacci(private val count: Int) {
+    operator fun iterator() = object : Iterator<Int> {
+        private var current = 0
+        private var next = 1
+        private var index = 0
+
+        override fun hasNext() = index < count
+
+        override fun next(): Int {
+            val result = current
+            val sum = current + next
+            current = next
+            next = sum
+            index++
+            return result
+        }
+    }
+}
+
+fun main() {
+    val fib = Fibonacci(10)
+
+    for (num in fib) {
+        print("$num ")
+    }
+    // 0 1 1 2 3 5 8 13 21 34
+}
+```
+
+---
+
+## 실전 예제
+
+### Money 클래스
+
+```kotlin
+data class Money(val amount: Double, val currency: String = "USD") {
+    init {
+        require(amount >= 0) { "Amount must be non-negative" }
+    }
+
+    operator fun plus(other: Money): Money {
+        require(currency == other.currency) { "Currency mismatch" }
+        return Money(amount + other.amount, currency)
+    }
+
+    operator fun minus(other: Money): Money {
+        require(currency == other.currency) { "Currency mismatch" }
+        require(amount >= other.amount) { "Insufficient funds" }
+        return Money(amount - other.amount, currency)
+    }
+
+    operator fun times(multiplier: Int) = Money(amount * multiplier, currency)
+    operator fun times(multiplier: Double) = Money(amount * multiplier, currency)
+
+    operator fun compareTo(other: Money): Int {
+        require(currency == other.currency) { "Currency mismatch" }
+        return amount.compareTo(other.amount)
+    }
+
+    override fun toString() = "$$amount $currency"
+}
+
+fun main() {
+    val price = Money(10.0)
+    val tax = Money(1.5)
+
+    val total = price + tax
+    println("Total: $total")  // Total: $11.5 USD
+
+    val discounted = total - Money(2.0)
+    println("Discounted: $discounted")  // Discounted: $9.5 USD
+
+    val tripled = price * 3
+    println("Tripled: $tripled")  // Tripled: $30.0 USD
+
+    println(price < total)  // true
+}
+```
+
+---
+
+### Time 클래스
+
+```kotlin
+data class Time(val hours: Int, val minutes: Int) {
+    init {
+        require(hours in 0..23 && minutes in 0..59)
+    }
+
+    operator fun plus(minutes: Int): Time {
+        val totalMinutes = this.hours * 60 + this.minutes + minutes
+        return Time((totalMinutes / 60) % 24, totalMinutes % 60)
+    }
+
+    operator fun minus(other: Time): Int {
+        val thisMinutes = hours * 60 + minutes
+        val otherMinutes = other.hours * 60 + other.minutes
+        return thisMinutes - otherMinutes
+    }
+
+    override fun toString() = String.format("%02d:%02d", hours, minutes)
+}
+
+fun main() {
+    val start = Time(9, 30)
+    val end = Time(17, 45)
+
+    val lunchBreak = start + 120  // 2시간 후
+    println("Lunch: $lunchBreak")  // Lunch: 11:30
+
+    val workMinutes = end - start
+    println("Work time: $workMinutes minutes")  // Work time: 495 minutes
+}
+```
+
+---
+
+## Java와 비교
+
+### Java에는 연산자 오버로딩이 없음
+
+**Java**:
+```java
+public class Point {
+    private int x, y;
+
+    public Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    // 메소드로만 제공
+    public Point plus(Point other) {
+        return new Point(this.x + other.x, this.y + other.y);
+    }
+}
+
+// 사용
+Point p1 = new Point(10, 20);
+Point p2 = new Point(30, 40);
+Point p3 = p1.plus(p2);  // 메소드 호출만 가능
+```
+
+**Kotlin**:
+```kotlin
+data class Point(val x: Int, val y: Int) {
+    operator fun plus(other: Point) = Point(x + other.x, y + other.y)
+}
+
+// 사용
+val p1 = Point(10, 20)
+val p2 = Point(30, 40)
+val p3 = p1 + p2  // 연산자 사용 가능!
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 연산자는 직관적으로
+
+```kotlin
+// ✅ 직관적
+data class Vector(val x: Double, val y: Double) {
+    operator fun plus(other: Vector) = Vector(x + other.x, y + other.y)
+}
+
+// ❌ 직관적이지 않음
+class User(val name: String) {
+    operator fun plus(other: User): String {
+        return "$name and ${other.name}"  // + 연산자가 문자열을 반환?
+    }
+}
+```
+
+---
+
+### 💡 Tip 2: 불변 객체 선호
+
+```kotlin
+// ✅ 불변 - plus 사용
+data class Point(val x: Int, val y: Int) {
+    operator fun plus(other: Point) = Point(x + other.x, y + other.y)
+}
+
+// ❌ 가변 - plusAssign은 부작용 있음
+class MutablePoint(var x: Int, var y: Int) {
+    operator fun plusAssign(other: MutablePoint) {
+        x += other.x
+        y += other.y
+    }
+}
+```
+
+---
+
+### 💡 Tip 3: 표준 라이브러리 따르기
+
+```kotlin
+// Collection의 plus는 새 컬렉션 반환
+val list1 = listOf(1, 2, 3)
+val list2 = list1 + 4  // 새 리스트: [1, 2, 3, 4]
+
+// MutableCollection의 plusAssign은 변경
+val mutableList = mutableListOf(1, 2, 3)
+mutableList += 4  // 기존 리스트 변경: [1, 2, 3, 4]
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: Fraction (분수) 클래스
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+data class Fraction(val numerator: Int, val denominator: Int) {
+    init {
+        require(denominator != 0) { "Denominator cannot be zero" }
+    }
+
+    private fun gcd(a: Int, b: Int): Int {
+        return if (b == 0) a else gcd(b, a % b)
+    }
+
+    private fun simplify(): Fraction {
+        val g = gcd(numerator, denominator)
+        return Fraction(numerator / g, denominator / g)
+    }
+
+    operator fun plus(other: Fraction): Fraction {
+        return Fraction(
+            numerator * other.denominator + other.numerator * denominator,
+            denominator * other.denominator
+        ).simplify()
+    }
+
+    operator fun minus(other: Fraction): Fraction {
+        return Fraction(
+            numerator * other.denominator - other.numerator * denominator,
+            denominator * other.denominator
+        ).simplify()
+    }
+
+    operator fun times(other: Fraction): Fraction {
+        return Fraction(
+            numerator * other.numerator,
+            denominator * other.denominator
+        ).simplify()
+    }
+
+    operator fun div(other: Fraction): Fraction {
+        return Fraction(
+            numerator * other.denominator,
+            denominator * other.numerator
+        ).simplify()
+    }
+
+    override fun toString() = "$numerator/$denominator"
+}
+
+fun main() {
+    val f1 = Fraction(1, 2)  // 1/2
+    val f2 = Fraction(1, 3)  // 1/3
+
+    println("$f1 + $f2 = ${f1 + f2}")  // 1/2 + 1/3 = 5/6
+    println("$f1 - $f2 = ${f1 - f2}")  // 1/2 - 1/3 = 1/6
+    println("$f1 * $f2 = ${f1 * f2}")  // 1/2 * 1/3 = 1/6
+    println("$f1 / $f2 = ${f1 / f2}")  // 1/2 / 1/3 = 3/2
+}
+```
+</details>
+
+### 문제 2: Matrix 클래스
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+class Matrix(private val rows: Int, private val cols: Int) {
+    private val data = Array(rows) { DoubleArray(cols) }
+
+    operator fun get(row: Int, col: Int) = data[row][col]
+
+    operator fun set(row: Int, col: Int, value: Double) {
+        data[row][col] = value
+    }
+
+    operator fun plus(other: Matrix): Matrix {
+        require(rows == other.rows && cols == other.cols)
+        val result = Matrix(rows, cols)
+        for (i in 0 until rows) {
+            for (j in 0 until cols) {
+                result[i, j] = this[i, j] + other[i, j]
+            }
+        }
+        return result
+    }
+
+    operator fun times(scalar: Double): Matrix {
+        val result = Matrix(rows, cols)
+        for (i in 0 until rows) {
+            for (j in 0 until cols) {
+                result[i, j] = this[i, j] * scalar
+            }
+        }
+        return result
+    }
+
+    override fun toString(): String {
+        return data.joinToString("\n") { row ->
+            row.joinToString(" ") { "%.2f".format(it) }
+        }
+    }
+}
+
+fun main() {
+    val m1 = Matrix(2, 2)
+    m1[0, 0] = 1.0; m1[0, 1] = 2.0
+    m1[1, 0] = 3.0; m1[1, 1] = 4.0
+
+    val m2 = Matrix(2, 2)
+    m2[0, 0] = 5.0; m2[0, 1] = 6.0
+    m2[1, 0] = 7.0; m2[1, 1] = 8.0
+
+    println("M1 + M2:")
+    println(m1 + m2)
+
+    println("\nM1 * 2:")
+    println(m1 * 2.0)
+}
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **operator 키워드**
+   - 연산자 오버로딩에 필수
+   - 정해진 함수명 사용
+
+2. **주요 연산자**
+   - 산술: `plus`, `minus`, `times`, `div`
+   - 단항: `unaryMinus`, `inc`, `dec`
+   - 비교: `compareTo`
+   - 인덱스: `get`, `set`
+   - 호출: `invoke`
+
+3. **원칙**
+   - 직관적으로 사용
+   - 불변 객체 선호
+   - 표준 라이브러리 따르기
+
+4. **Java 대비**
+   - Java는 연산자 오버로딩 없음
+   - Kotlin은 언어 차원 지원
+
+---
+
+## Part 5 완료!
+
+Part 5: 고급 기능을 모두 마쳤습니다!
+
+**배운 내용**:
+- ✅ Chapter 12: 제네릭
+- ✅ Chapter 13: 델리게이션
+- ✅ Chapter 14: 연산자 오버로딩
+
+---
+
+**지금까지의 전체 진행 상황**:
+- ✅ Part 1: Kotlin 시작하기
+- ✅ Part 2: Kotlin 기초 문법
+- ✅ Part 3: Kotlin 핵심 개념
+- ✅ Part 4: 객체지향 프로그래밍
+- ✅ Part 5: 고급 기능
+
+**남은 내용**:
+- Part 6: 함수형 프로그래밍
+- Part 7: 코루틴과 비동기
+- Part 8: Spring Boot 통합
+- Part 9: 실전 활용
+- Part 10: 부록
+
+---
+
+[← 이전: Chapter 13. 델리게이션](chapter13-delegation.md) | [다음: Chapter 15. 함수형 프로그래밍 개념 →](../part6-functional/chapter15-functional-concepts.md)

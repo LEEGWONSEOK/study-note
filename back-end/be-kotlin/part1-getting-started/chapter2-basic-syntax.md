@@ -1,0 +1,814 @@
+# Chapter 2. 기본 문법
+
+## 2.1 변수 선언 (val vs var)
+
+Kotlin에서 변수를 선언하는 방법은 두 가지입니다.
+
+### val: 불변 변수 (Immutable)
+
+**읽기 전용 변수** - 한 번 할당하면 변경 불가
+
+```kotlin
+val name = "Kotlin"
+name = "Java"  // 컴파일 에러! val cannot be reassigned
+```
+
+**Java의 `final`과 동일**:
+```java
+final String name = "Kotlin";
+name = "Java";  // 컴파일 에러!
+```
+
+### var: 가변 변수 (Mutable)
+
+**재할당 가능한 변수**
+
+```kotlin
+var count = 0
+count = 1  // OK
+count = 2  // OK
+```
+
+**Java의 일반 변수**:
+```java
+int count = 0;
+count = 1;  // OK
+```
+
+---
+
+### val vs var: 언제 무엇을 사용할까?
+
+**기본 원칙**: **가능한 한 `val`을 사용하세요!**
+
+```kotlin
+// ✅ 좋은 예: val 사용
+fun calculateTotal(price: Int, quantity: Int): Int {
+    val total = price * quantity
+    return total
+}
+
+// ❌ 나쁜 예: 불필요한 var 사용
+fun calculateTotal(price: Int, quantity: Int): Int {
+    var total = price * quantity  // 재할당하지 않는데 var 사용
+    return total
+}
+```
+
+**var가 필요한 경우**:
+```kotlin
+fun countDown(from: Int) {
+    var count = from  // 값이 계속 변경되므로 var 필요
+    while (count > 0) {
+        println(count)
+        count--
+    }
+}
+```
+
+---
+
+### 변수 선언 문법
+
+**기본 형태**:
+```kotlin
+val 변수명: 타입 = 값
+var 변수명: 타입 = 값
+```
+
+**예시**:
+```kotlin
+val name: String = "Kotlin"
+var age: Int = 5
+```
+
+**타입 생략 (타입 추론)**:
+```kotlin
+val name = "Kotlin"  // String으로 추론
+var age = 5          // Int로 추론
+```
+
+**선언 후 나중에 초기화**:
+```kotlin
+val name: String
+name = "Kotlin"  // OK
+
+val age: String
+age = "5"
+age = "10"  // 컴파일 에러! val은 한 번만 할당 가능
+```
+
+---
+
+## 2.2 기본 타입 (Int, String, Boolean 등)
+
+Kotlin의 모든 것은 **객체**입니다. Java처럼 primitive 타입과 wrapper 클래스가 분리되어 있지 않습니다.
+
+### 숫자 타입
+
+| Kotlin | Java | 크기 | 범위 |
+|--------|------|------|------|
+| Byte | byte | 8비트 | -128 ~ 127 |
+| Short | short | 16비트 | -32,768 ~ 32,767 |
+| Int | int | 32비트 | -2³¹ ~ 2³¹-1 |
+| Long | long | 64비트 | -2⁶³ ~ 2⁶³-1 |
+| Float | float | 32비트 | IEEE 754 |
+| Double | double | 64비트 | IEEE 754 |
+
+**예시**:
+```kotlin
+val byteValue: Byte = 127
+val shortValue: Short = 32767
+val intValue: Int = 2147483647
+val longValue: Long = 9223372036854775807L  // L 접미사
+
+val floatValue: Float = 3.14f  // f 접미사 필요
+val doubleValue: Double = 3.14
+val doubleValue2 = 3.14  // 기본적으로 Double로 추론
+```
+
+**Java와 비교**:
+```java
+// Java - primitive와 wrapper 분리
+int number = 10;           // primitive
+Integer boxed = 10;        // wrapper (auto-boxing)
+
+// Kotlin - 모두 객체처럼 사용
+val number = 10            // 실제로는 primitive로 컴파일됨
+val boxed: Int? = 10       // Nullable 타입은 wrapper로 컴파일됨
+```
+
+---
+
+### 문자와 문자열
+
+**Char**: 단일 문자
+```kotlin
+val char: Char = 'A'
+val koreanChar: Char = '한'
+```
+
+**String**: 문자열
+```kotlin
+val name: String = "Kotlin"
+val multiLine: String = """
+    여러 줄에 걸친
+    문자열을 작성할 수 있습니다.
+""".trimIndent()
+```
+
+**Java와 비교**:
+```java
+// Java
+char ch = 'A';
+String name = "Java";
+
+String multiLine = "여러 줄에 걸친\n" +
+                   "문자열을 작성하려면\n" +
+                   "이렇게 해야 합니다.";
+
+// Kotlin은 더 간단!
+val multiLine = """
+    여러 줄에 걸친
+    문자열을 간단히 작성
+""".trimIndent()
+```
+
+---
+
+### Boolean
+
+```kotlin
+val isKotlinAwesome: Boolean = true
+val isJavaBad: Boolean = false
+
+// 논리 연산
+val result = isKotlinAwesome && !isJavaBad  // true
+```
+
+Java와 동일하게 사용합니다.
+
+---
+
+### 배열 (Array)
+
+**배열 생성**:
+```kotlin
+// 방법 1: arrayOf 함수
+val numbers = arrayOf(1, 2, 3, 4, 5)
+
+// 방법 2: Array 생성자
+val squares = Array(5) { i -> i * i }  // [0, 1, 4, 9, 16]
+
+// 방법 3: 타입 명시
+val names: Array<String> = arrayOf("A", "B", "C")
+```
+
+**배열 접근**:
+```kotlin
+val numbers = arrayOf(1, 2, 3, 4, 5)
+
+println(numbers[0])      // 1
+println(numbers.size)    // 5
+
+numbers[0] = 10         // 값 변경 가능
+println(numbers[0])     // 10
+```
+
+**Java와 비교**:
+```java
+// Java
+int[] numbers = {1, 2, 3, 4, 5};
+int[] squares = new int[5];
+for (int i = 0; i < 5; i++) {
+    squares[i] = i * i;
+}
+
+// Kotlin
+val numbers = arrayOf(1, 2, 3, 4, 5)
+val squares = Array(5) { i -> i * i }
+```
+
+---
+
+### 컬렉션 (List, Set, Map)
+
+Kotlin은 **불변 컬렉션**과 **가변 컬렉션**을 구분합니다.
+
+#### List
+
+```kotlin
+// 불변 List (읽기 전용)
+val readOnlyList = listOf(1, 2, 3)
+// readOnlyList.add(4)  // 컴파일 에러!
+
+// 가변 List
+val mutableList = mutableListOf(1, 2, 3)
+mutableList.add(4)  // OK
+mutableList[0] = 10 // OK
+```
+
+**Java와 비교**:
+```java
+// Java - 불변 리스트 만들기 복잡
+List<Integer> readOnly = Collections.unmodifiableList(
+    Arrays.asList(1, 2, 3)
+);
+
+List<Integer> mutable = new ArrayList<>(Arrays.asList(1, 2, 3));
+
+// Kotlin - 간단!
+val readOnly = listOf(1, 2, 3)
+val mutable = mutableListOf(1, 2, 3)
+```
+
+#### Set
+
+```kotlin
+val readOnlySet = setOf(1, 2, 3, 3)  // [1, 2, 3] - 중복 제거
+val mutableSet = mutableSetOf(1, 2, 3)
+mutableSet.add(4)
+```
+
+#### Map
+
+```kotlin
+// 불변 Map
+val readOnlyMap = mapOf(
+    "name" to "Kotlin",
+    "version" to "1.9"
+)
+println(readOnlyMap["name"])  // Kotlin
+
+// 가변 Map
+val mutableMap = mutableMapOf(
+    "name" to "Kotlin"
+)
+mutableMap["version"] = "1.9"
+mutableMap.put("year", "2023")  // Java 스타일도 가능
+```
+
+**Java와 비교**:
+```java
+// Java
+Map<String, String> map = new HashMap<>();
+map.put("name", "Kotlin");
+map.put("version", "1.9");
+String name = map.get("name");
+
+// Kotlin
+val map = mapOf(
+    "name" to "Kotlin",
+    "version" to "1.9"
+)
+val name = map["name"]  // 배열처럼 접근 가능!
+```
+
+---
+
+## 2.3 타입 추론
+
+Kotlin 컴파일러는 문맥을 보고 타입을 자동으로 추론합니다.
+
+### 기본 타입 추론
+
+```kotlin
+val number = 42              // Int로 추론
+val longNumber = 42L         // Long으로 추론
+val floatNumber = 3.14f      // Float로 추론
+val doubleNumber = 3.14      // Double로 추론
+val text = "Hello"           // String으로 추론
+val flag = true              // Boolean으로 추론
+```
+
+### 명시적 타입 선언이 필요한 경우
+
+**1. 초기화 없이 선언할 때**:
+```kotlin
+val name: String  // 타입 필수
+name = "Kotlin"
+```
+
+**2. 더 상위 타입으로 선언하고 싶을 때**:
+```kotlin
+val number: Number = 42  // Int이지만 Number로 선언
+val list: List<Int> = mutableListOf(1, 2, 3)  // MutableList이지만 List로 선언
+```
+
+**3. Long이나 Float를 명확히 하고 싶을 때**:
+```kotlin
+val longNumber = 42L      // Long 타입
+// 또는
+val longNumber: Long = 42
+
+val floatNumber = 3.14f   // Float 타입
+// 또는
+val floatNumber: Float = 3.14
+```
+
+---
+
+## 2.4 문자열 템플릿
+
+Kotlin의 가장 편리한 기능 중 하나입니다!
+
+### 기본 문자열 템플릿
+
+**변수 삽입**:
+```kotlin
+val name = "Kotlin"
+val version = 1.9
+
+println("Welcome to $name $version")
+// 출력: Welcome to Kotlin 1.9
+```
+
+**Java와 비교**:
+```java
+// Java
+String name = "Java";
+int version = 17;
+
+System.out.println("Welcome to " + name + " " + version);
+// 또는 String.format
+System.out.println(String.format("Welcome to %s %d", name, version));
+
+// Kotlin
+val name = "Kotlin"
+val version = 1.9
+println("Welcome to $name $version")
+```
+
+---
+
+### 표현식 삽입
+
+**`${}` 사용**:
+```kotlin
+val price = 10000
+val quantity = 3
+
+println("총 가격: ${price * quantity}원")
+// 출력: 총 가격: 30000원
+
+val name = "kotlin"
+println("대문자: ${name.uppercase()}")
+// 출력: 대문자: KOTLIN
+```
+
+**복잡한 표현식**:
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+println("합계: ${numbers.sum()}, 평균: ${numbers.average()}")
+// 출력: 합계: 15, 평균: 3.0
+```
+
+---
+
+### 여러 줄 문자열 (Triple Quotes)
+
+**기본 사용**:
+```kotlin
+val text = """
+    첫 번째 줄
+    두 번째 줄
+    세 번째 줄
+"""
+
+println(text)
+```
+
+**출력**:
+```
+    첫 번째 줄
+    두 번째 줄
+    세 번째 줄
+```
+
+**trimIndent()로 들여쓰기 제거**:
+```kotlin
+val text = """
+    첫 번째 줄
+    두 번째 줄
+    세 번째 줄
+""".trimIndent()
+
+println(text)
+```
+
+**출력**:
+```
+첫 번째 줄
+두 번째 줄
+세 번째 줄
+```
+
+**trimMargin()으로 특정 문자 기준 정리**:
+```kotlin
+val text = """
+    |첫 번째 줄
+    |두 번째 줄
+    |세 번째 줄
+""".trimMargin()
+
+println(text)
+```
+
+**출력**:
+```
+첫 번째 줄
+두 번째 줄
+세 번째 줄
+```
+
+---
+
+### 실전 예제: JSON 문자열
+
+```kotlin
+val name = "홍길동"
+val age = 30
+val email = "hong@example.com"
+
+val json = """
+{
+    "name": "$name",
+    "age": $age,
+    "email": "$email"
+}
+""".trimIndent()
+
+println(json)
+```
+
+**출력**:
+```json
+{
+    "name": "홍길동",
+    "age": 30,
+    "email": "hong@example.com"
+}
+```
+
+**Java와 비교**:
+```java
+// Java
+String name = "홍길동";
+int age = 30;
+String email = "hong@example.com";
+
+String json = "{\n" +
+              "    \"name\": \"" + name + "\",\n" +
+              "    \"age\": " + age + ",\n" +
+              "    \"email\": \"" + email + "\"\n" +
+              "}";
+
+// Kotlin이 훨씬 읽기 쉽고 작성하기 편함!
+```
+
+---
+
+## 2.5 주석
+
+Java와 동일하게 사용합니다.
+
+### 한 줄 주석
+
+```kotlin
+// 이것은 한 줄 주석입니다.
+val name = "Kotlin"  // 변수 선언
+```
+
+### 여러 줄 주석
+
+```kotlin
+/*
+ * 이것은 여러 줄 주석입니다.
+ * 여러 줄에 걸쳐 작성할 수 있습니다.
+ */
+val version = 1.9
+```
+
+### KDoc (문서화 주석)
+
+Java의 JavaDoc과 유사합니다.
+
+```kotlin
+/**
+ * 두 숫자를 더하는 함수
+ *
+ * @param a 첫 번째 숫자
+ * @param b 두 번째 숫자
+ * @return 두 숫자의 합
+ */
+fun add(a: Int, b: Int): Int {
+    return a + b
+}
+```
+
+---
+
+## 2.6 Java와 비교: 기본 문법 차이점
+
+### 종합 비교표
+
+| 항목 | Java | Kotlin |
+|------|------|--------|
+| 변수 선언 | `final int x = 10;` | `val x = 10` |
+| 가변 변수 | `int x = 10;` | `var x = 10` |
+| 타입 위치 | `String name` | `name: String` |
+| 타입 추론 | ❌ (Java 10+ var) | ✅ 항상 가능 |
+| Null 안전성 | ❌ | ✅ `String?` |
+| 문자열 보간 | `"Hello " + name` | `"Hello $name"` |
+| 세미콜론 | 필수 `;` | 선택 (보통 생략) |
+| 배열 생성 | `new int[]{1,2,3}` | `arrayOf(1,2,3)` |
+| 리스트 생성 | `Arrays.asList(...)` | `listOf(...)` |
+
+---
+
+### 실전 코드 비교
+
+**시나리오**: 사용자 정보를 출력하는 코드
+
+**Java 코드**:
+```java
+public class UserExample {
+    public static void main(String[] args) {
+        final String name = "홍길동";
+        final int age = 30;
+        final String email = "hong@example.com";
+
+        List<String> hobbies = Arrays.asList("독서", "운동", "코딩");
+
+        System.out.println("이름: " + name);
+        System.out.println("나이: " + age);
+        System.out.println("이메일: " + email);
+        System.out.println("취미:");
+
+        for (String hobby : hobbies) {
+            System.out.println("- " + hobby);
+        }
+    }
+}
+```
+
+**Kotlin 코드**:
+```kotlin
+fun main() {
+    val name = "홍길동"
+    val age = 30
+    val email = "hong@example.com"
+
+    val hobbies = listOf("독서", "운동", "코딩")
+
+    println("이름: $name")
+    println("나이: $age")
+    println("이메일: $email")
+    println("취미:")
+
+    for (hobby in hobbies) {
+        println("- $hobby")
+    }
+}
+```
+
+**차이점**:
+- ✅ 클래스 선언 불필요
+- ✅ 타입 추론으로 코드 간결
+- ✅ 문자열 템플릿으로 가독성 향상
+- ✅ 컬렉션 생성이 더 간단
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: val을 기본으로 사용하세요
+
+```kotlin
+// ✅ 좋은 습관
+fun calculatePrice(basePrice: Int, taxRate: Double): Double {
+    val tax = basePrice * taxRate
+    val total = basePrice + tax
+    return total
+}
+
+// ❌ 나쁜 습관
+fun calculatePrice(basePrice: Int, taxRate: Double): Double {
+    var tax = basePrice * taxRate      // 재할당 안 하는데 var 사용
+    var total = basePrice + tax        // 재할당 안 하는데 var 사용
+    return total
+}
+```
+
+### 💡 Tip 2: 타입 추론을 적극 활용하되, 명확성이 필요하면 명시
+
+```kotlin
+// ✅ 추론 가능 - 타입 생략
+val name = "Kotlin"
+val count = 42
+
+// ✅ 추론 어려움 - 타입 명시
+val data: List<String> = loadData()
+val result: Result<User> = fetchUser()
+```
+
+### 💡 Tip 3: 문자열 템플릿 활용으로 가독성 향상
+
+```kotlin
+// ❌ 연결 연산자 사용
+val message = "User " + name + " has " + count + " items"
+
+// ✅ 문자열 템플릿 사용
+val message = "User $name has $count items"
+
+// ✅ 복잡한 표현식은 중괄호
+val message = "Total: ${price * quantity}원"
+```
+
+### 💡 Tip 4: 여러 줄 문자열은 trimIndent() 사용
+
+```kotlin
+fun generateHtml(title: String, content: String) = """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <title>$title</title>
+        </head>
+        <body>
+            <h1>$content</h1>
+        </body>
+    </html>
+""".trimIndent()
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 변수 선언 연습
+나이, 이름, 이메일을 저장하는 변수를 선언하고 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val name = "김철수"
+    val age = 25
+    val email = "kim@example.com"
+
+    println("이름: $name")
+    println("나이: $age")
+    println("이메일: $email")
+}
+```
+</details>
+
+### 문제 2: 컬렉션 다루기
+1부터 10까지의 숫자 리스트를 만들고, 각 숫자에 2를 곱한 결과를 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val numbers = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+    for (number in numbers) {
+        println("$number * 2 = ${number * 2}")
+    }
+}
+```
+</details>
+
+### 문제 3: 문자열 템플릿 활용
+상품명, 가격, 수량을 입력받아 총 금액을 계산하고 영수증 형태로 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val productName = "노트북"
+    val price = 1500000
+    val quantity = 2
+    val total = price * quantity
+
+    val receipt = """
+        ========== 영수증 ==========
+        상품명: $productName
+        단가: ${price}원
+        수량: ${quantity}개
+        ----------------------------
+        총 금액: ${total}원
+        ============================
+    """.trimIndent()
+
+    println(receipt)
+}
+```
+</details>
+
+### 문제 4: Map 사용하기
+학생 이름을 key로, 점수를 value로 하는 Map을 만들고 모든 학생의 정보를 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    val scores = mapOf(
+        "김철수" to 95,
+        "이영희" to 88,
+        "박민수" to 92
+    )
+
+    for ((name, score) in scores) {
+        println("$name: ${score}점")
+    }
+}
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **val vs var**
+   - `val`: 불변 (권장) ✅
+   - `var`: 가변 (필요시만)
+
+2. **타입 추론**
+   - 대부분의 경우 타입 생략 가능
+   - 컴파일러가 자동으로 추론
+
+3. **문자열 템플릿**
+   - `$변수명` 또는 `${표현식}`
+   - Java의 `+` 연산자보다 편리
+
+4. **컬렉션**
+   - 불변: `listOf`, `setOf`, `mapOf`
+   - 가변: `mutableListOf`, `mutableSetOf`, `mutableMapOf`
+
+5. **Java와의 차이**
+   - 세미콜론 선택
+   - 타입이 변수명 뒤에
+   - 훨씬 간결한 문법
+
+---
+
+## 다음 챕터 예고
+
+Part 2, Chapter 3에서는 **제어 흐름**을 다룹니다:
+- if 표현식 (expression vs statement)
+- when 표현식 (switch보다 강력)
+- for, while 루프
+- 범위(Range) 활용
+
+Java의 제어문과 비슷하지만 더 강력한 Kotlin의 제어 흐름을 배워봅시다!
+
+---
+
+[← 이전: Chapter 1. Kotlin 소개](chapter1-introduction.md) | [다음: Chapter 3. 제어 흐름 →](../part2-basic-syntax/chapter3-control-flow.md)

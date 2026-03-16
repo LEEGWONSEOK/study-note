@@ -1,0 +1,856 @@
+# Chapter 3. 제어 흐름
+
+## 3.1 if 표현식 (expression vs statement)
+
+Kotlin에서 `if`는 **표현식(expression)**입니다. Java의 `if`는 **문장(statement)**입니다.
+
+### Expression vs Statement
+
+**Statement (문장)**: 값을 반환하지 않음
+```java
+// Java - if는 statement
+int max;
+if (a > b) {
+    max = a;
+} else {
+    max = b;
+}
+```
+
+**Expression (표현식)**: 값을 반환함
+```kotlin
+// Kotlin - if는 expression
+val max = if (a > b) a else b
+```
+
+---
+
+### 기본 사용법
+
+**단순 조건**:
+```kotlin
+val age = 20
+
+if (age >= 18) {
+    println("성인입니다")
+} else {
+    println("미성년자입니다")
+}
+```
+
+**값 반환**:
+```kotlin
+val age = 20
+val status = if (age >= 18) "성인" else "미성년자"
+println(status)  // 성인
+```
+
+**여러 줄 블록**:
+```kotlin
+val score = 85
+
+val grade = if (score >= 90) {
+    println("A 등급입니다!")
+    "A"  // 마지막 표현식이 반환값
+} else if (score >= 80) {
+    println("B 등급입니다!")
+    "B"
+} else {
+    println("노력이 필요합니다.")
+    "C"
+}
+
+println("최종 등급: $grade")
+```
+
+---
+
+### Java와 비교
+
+**Java 삼항 연산자**:
+```java
+// Java
+int a = 10;
+int b = 20;
+int max = (a > b) ? a : b;
+
+String result = (score >= 60) ? "합격" : "불합격";
+```
+
+**Kotlin if 표현식**:
+```kotlin
+// Kotlin - 삼항 연산자 없음! if 표현식 사용
+val a = 10
+val b = 20
+val max = if (a > b) a else b
+
+val result = if (score >= 60) "합격" else "불합격"
+```
+
+**중요**: Kotlin에는 삼항 연산자가 없습니다. `if` 표현식으로 충분하기 때문입니다!
+
+---
+
+### 복잡한 조건 처리
+
+```kotlin
+fun getShippingCost(price: Int, isPremium: Boolean): Int {
+    return if (isPremium) {
+        0  // 프리미엄 회원은 무료 배송
+    } else if (price >= 50000) {
+        0  // 5만원 이상 무료 배송
+    } else if (price >= 30000) {
+        2500  // 3만원 이상 2,500원
+    } else {
+        3000  // 기본 배송비
+    }
+}
+```
+
+---
+
+## 3.2 when 표현식 (switch의 강력한 대안)
+
+`when`은 Java의 `switch`를 훨씬 강력하게 만든 것입니다.
+
+### 기본 사용법
+
+**Java switch**:
+```java
+// Java
+int dayOfWeek = 3;
+String dayName;
+
+switch (dayOfWeek) {
+    case 1:
+        dayName = "월요일";
+        break;
+    case 2:
+        dayName = "화요일";
+        break;
+    case 3:
+        dayName = "수요일";
+        break;
+    default:
+        dayName = "기타";
+        break;
+}
+```
+
+**Kotlin when**:
+```kotlin
+// Kotlin
+val dayOfWeek = 3
+
+val dayName = when (dayOfWeek) {
+    1 -> "월요일"
+    2 -> "화요일"
+    3 -> "수요일"
+    4 -> "목요일"
+    5 -> "금요일"
+    6 -> "토요일"
+    7 -> "일요일"
+    else -> "잘못된 값"
+}
+
+println(dayName)  // 수요일
+```
+
+**차이점**:
+- ✅ `break` 불필요
+- ✅ 값 반환 가능 (표현식)
+- ✅ 더 간결한 문법
+- ✅ Fall-through 없음 (의도하지 않은 버그 방지)
+
+---
+
+### 여러 조건을 하나로 그룹화
+
+```kotlin
+fun isWeekend(dayOfWeek: Int): Boolean {
+    return when (dayOfWeek) {
+        6, 7 -> true  // 쉼표로 여러 값 처리
+        else -> false
+    }
+}
+
+// 사용
+println(isWeekend(6))  // true
+println(isWeekend(1))  // false
+```
+
+---
+
+### 범위(Range)와 함께 사용
+
+```kotlin
+fun getAgeGroup(age: Int): String {
+    return when (age) {
+        in 0..12 -> "어린이"
+        in 13..19 -> "청소년"
+        in 20..64 -> "성인"
+        in 65..120 -> "노인"
+        else -> "잘못된 나이"
+    }
+}
+
+println(getAgeGroup(25))  // 성인
+println(getAgeGroup(15))  // 청소년
+```
+
+---
+
+### 타입 체크와 함께 사용
+
+```kotlin
+fun describe(obj: Any): String {
+    return when (obj) {
+        is String -> "문자열: 길이 ${obj.length}"  // 스마트 캐스팅!
+        is Int -> "정수: $obj"
+        is List<*> -> "리스트: 크기 ${obj.size}"
+        else -> "알 수 없는 타입"
+    }
+}
+
+println(describe("Hello"))     // 문자열: 길이 5
+println(describe(42))          // 정수: 42
+println(describe(listOf(1,2))) // 리스트: 크기 2
+```
+
+**스마트 캐스팅**: `is String` 체크 후 자동으로 `String` 타입으로 캐스팅!
+
+---
+
+### 조건식 사용
+
+```kotlin
+fun getGrade(score: Int): String {
+    return when {
+        score >= 90 -> "A"
+        score >= 80 -> "B"
+        score >= 70 -> "C"
+        score >= 60 -> "D"
+        else -> "F"
+    }
+}
+
+println(getGrade(85))  // B
+```
+
+**when (조건없이)**:
+- `when` 뒤에 인자 없이 사용
+- 각 분기가 Boolean 표현식
+- `if-else if-else` 체인의 더 깔끔한 대안
+
+---
+
+### 복잡한 조건
+
+```kotlin
+fun validateUser(age: Int, hasLicense: Boolean, experience: Int): String {
+    return when {
+        age < 18 -> "미성년자는 운전할 수 없습니다"
+        !hasLicense -> "면허증이 필요합니다"
+        experience < 1 -> "초보 운전자"
+        experience < 5 -> "중급 운전자"
+        else -> "숙련 운전자"
+    }
+}
+```
+
+---
+
+### 값 저장 및 사용
+
+```kotlin
+fun processOrder(status: String) {
+    val message = when (status) {
+        "PENDING" -> {
+            // 여러 줄 처리 가능
+            println("주문을 처리하는 중입니다...")
+            "주문 대기"  // 마지막 값이 반환
+        }
+        "PROCESSING" -> {
+            println("배송 준비 중...")
+            "처리 중"
+        }
+        "SHIPPED" -> "배송 중"
+        "DELIVERED" -> "배송 완료"
+        else -> "알 수 없는 상태"
+    }
+
+    println("현재 상태: $message")
+}
+```
+
+---
+
+## 3.3 for 루프와 범위(Range)
+
+### 범위 (Range)
+
+Kotlin의 범위는 매우 강력합니다.
+
+**기본 범위**:
+```kotlin
+val range1 = 1..10        // 1부터 10까지 (10 포함)
+val range2 = 1 until 10   // 1부터 9까지 (10 미포함)
+val range3 = 10 downTo 1  // 10부터 1까지 (역순)
+val range4 = 1..10 step 2 // 1, 3, 5, 7, 9 (2씩 증가)
+```
+
+**범위 체크**:
+```kotlin
+val age = 25
+
+if (age in 18..64) {
+    println("성인입니다")
+}
+
+if (age !in 0..17) {
+    println("미성년자가 아닙니다")
+}
+```
+
+---
+
+### for 루프
+
+**기본 for 루프**:
+```kotlin
+// 1부터 5까지
+for (i in 1..5) {
+    println(i)
+}
+// 출력: 1, 2, 3, 4, 5
+
+// 0부터 4까지
+for (i in 0 until 5) {
+    println(i)
+}
+// 출력: 0, 1, 2, 3, 4
+
+// 5부터 1까지 (역순)
+for (i in 5 downTo 1) {
+    println(i)
+}
+// 출력: 5, 4, 3, 2, 1
+
+// 2씩 증가
+for (i in 0..10 step 2) {
+    println(i)
+}
+// 출력: 0, 2, 4, 6, 8, 10
+```
+
+---
+
+### 컬렉션 순회
+
+**리스트 순회**:
+```kotlin
+val fruits = listOf("사과", "바나나", "오렌지")
+
+// 기본 순회
+for (fruit in fruits) {
+    println(fruit)
+}
+
+// 인덱스와 함께
+for ((index, fruit) in fruits.withIndex()) {
+    println("$index: $fruit")
+}
+// 출력:
+// 0: 사과
+// 1: 바나나
+// 2: 오렌지
+```
+
+**Map 순회**:
+```kotlin
+val scores = mapOf(
+    "김철수" to 95,
+    "이영희" to 88,
+    "박민수" to 92
+)
+
+for ((name, score) in scores) {
+    println("$name: ${score}점")
+}
+// 출력:
+// 김철수: 95점
+// 이영희: 88점
+// 박민수: 92점
+```
+
+---
+
+### Java와 비교
+
+**Java**:
+```java
+// Java - 전통적인 for 루프
+for (int i = 0; i < 5; i++) {
+    System.out.println(i);
+}
+
+// Java - 향상된 for 루프
+List<String> fruits = Arrays.asList("사과", "바나나");
+for (String fruit : fruits) {
+    System.out.println(fruit);
+}
+
+// Java - 인덱스와 함께
+for (int i = 0; i < fruits.size(); i++) {
+    System.out.println(i + ": " + fruits.get(i));
+}
+```
+
+**Kotlin**:
+```kotlin
+// Kotlin - 범위 사용
+for (i in 0 until 5) {
+    println(i)
+}
+
+// Kotlin - 컬렉션 순회
+val fruits = listOf("사과", "바나나")
+for (fruit in fruits) {
+    println(fruit)
+}
+
+// Kotlin - 인덱스와 함께 (훨씬 간단!)
+for ((index, fruit) in fruits.withIndex()) {
+    println("$index: $fruit")
+}
+```
+
+---
+
+## 3.4 while과 do-while
+
+Java와 거의 동일합니다.
+
+### while 루프
+
+```kotlin
+var count = 0
+
+while (count < 5) {
+    println("count: $count")
+    count++
+}
+// 출력: 0, 1, 2, 3, 4
+```
+
+**실전 예제**:
+```kotlin
+fun readUntilEmpty() {
+    var input = readLine()
+
+    while (input != null && input.isNotEmpty()) {
+        println("입력: $input")
+        input = readLine()
+    }
+
+    println("종료")
+}
+```
+
+---
+
+### do-while 루프
+
+최소 한 번은 실행됩니다.
+
+```kotlin
+var number = 0
+
+do {
+    println("number: $number")
+    number++
+} while (number < 3)
+// 출력: 0, 1, 2
+```
+
+**while vs do-while**:
+```kotlin
+// while - 조건이 거짓이면 한 번도 실행 안 됨
+var x = 10
+while (x < 5) {
+    println("실행 안 됨")
+}
+
+// do-while - 최소 한 번은 실행
+var y = 10
+do {
+    println("한 번은 실행됨")  // 이 줄은 실행됨
+} while (y < 5)
+```
+
+---
+
+### break와 continue
+
+Java와 동일하게 사용합니다.
+
+**break**:
+```kotlin
+for (i in 1..10) {
+    if (i == 5) break  // i가 5가 되면 루프 종료
+    println(i)
+}
+// 출력: 1, 2, 3, 4
+```
+
+**continue**:
+```kotlin
+for (i in 1..5) {
+    if (i == 3) continue  // i가 3일 때 스킵
+    println(i)
+}
+// 출력: 1, 2, 4, 5
+```
+
+**중첩 루프에서 레이블 사용**:
+```kotlin
+outer@ for (i in 1..3) {
+    for (j in 1..3) {
+        if (i == 2 && j == 2) {
+            break@outer  // 외부 루프까지 종료
+        }
+        println("i=$i, j=$j")
+    }
+}
+// 출력:
+// i=1, j=1
+// i=1, j=2
+// i=1, j=3
+// i=2, j=1
+```
+
+---
+
+## 3.5 Java와 비교: 제어 흐름
+
+### 종합 비교표
+
+| 기능 | Java | Kotlin |
+|------|------|--------|
+| if | statement | expression (값 반환) |
+| 삼항 연산자 | `a > b ? a : b` | `if (a > b) a else b` |
+| switch/when | switch (제한적) | when (강력함) |
+| for | `for (int i=0; i<n; i++)` | `for (i in 0 until n)` |
+| 범위 | ❌ | `1..10`, `1 until 10` |
+| 컬렉션 순회 | 향상된 for | `for (item in list)` |
+| break/continue | ✅ | ✅ (레이블 지원) |
+
+---
+
+### 실전 코드 비교
+
+**시나리오**: HTTP 상태 코드에 따른 메시지 반환
+
+**Java 코드**:
+```java
+public String getStatusMessage(int statusCode) {
+    String message;
+
+    switch (statusCode) {
+        case 200:
+            message = "OK";
+            break;
+        case 201:
+            message = "Created";
+            break;
+        case 400:
+            message = "Bad Request";
+            break;
+        case 404:
+            message = "Not Found";
+            break;
+        case 500:
+            message = "Internal Server Error";
+            break;
+        default:
+            if (statusCode >= 200 && statusCode < 300) {
+                message = "Success";
+            } else if (statusCode >= 400 && statusCode < 500) {
+                message = "Client Error";
+            } else {
+                message = "Unknown";
+            }
+            break;
+    }
+
+    return message;
+}
+```
+
+**Kotlin 코드**:
+```kotlin
+fun getStatusMessage(statusCode: Int): String {
+    return when (statusCode) {
+        200 -> "OK"
+        201 -> "Created"
+        400 -> "Bad Request"
+        404 -> "Not Found"
+        500 -> "Internal Server Error"
+        in 200..299 -> "Success"
+        in 400..499 -> "Client Error"
+        else -> "Unknown"
+    }
+}
+```
+
+**차이점**:
+- ✅ break 불필요
+- ✅ 범위 체크 간단
+- ✅ 표현식으로 직접 반환
+- ✅ 훨씬 간결하고 읽기 쉬움
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: when을 활용한 다형성 처리
+
+```kotlin
+sealed class Result {
+    data class Success(val data: String) : Result()
+    data class Error(val message: String) : Result()
+    object Loading : Result()
+}
+
+fun handleResult(result: Result) {
+    when (result) {
+        is Result.Success -> println("데이터: ${result.data}")
+        is Result.Error -> println("에러: ${result.message}")
+        Result.Loading -> println("로딩 중...")
+    }
+    // else 불필요! sealed class는 모든 경우를 컴파일러가 체크
+}
+```
+
+### 💡 Tip 2: 범위를 활용한 유효성 검사
+
+```kotlin
+fun validateAge(age: Int): Boolean {
+    return age in 0..150
+}
+
+fun validatePort(port: Int): Boolean {
+    return port in 1..65535
+}
+
+fun validatePercentage(value: Double): Boolean {
+    return value in 0.0..100.0
+}
+```
+
+### 💡 Tip 3: when 표현식으로 복잡한 분기 단순화
+
+```kotlin
+// ❌ 복잡한 if-else
+fun getDiscount(memberType: String, purchaseAmount: Int): Double {
+    var discount = 0.0
+
+    if (memberType == "VIP") {
+        if (purchaseAmount >= 100000) {
+            discount = 0.2
+        } else {
+            discount = 0.1
+        }
+    } else if (memberType == "GOLD") {
+        if (purchaseAmount >= 100000) {
+            discount = 0.15
+        } else {
+            discount = 0.05
+        }
+    } else {
+        if (purchaseAmount >= 100000) {
+            discount = 0.1
+        }
+    }
+
+    return discount
+}
+
+// ✅ when으로 단순화
+fun getDiscount(memberType: String, purchaseAmount: Int): Double {
+    return when {
+        memberType == "VIP" && purchaseAmount >= 100000 -> 0.2
+        memberType == "VIP" -> 0.1
+        memberType == "GOLD" && purchaseAmount >= 100000 -> 0.15
+        memberType == "GOLD" -> 0.05
+        purchaseAmount >= 100000 -> 0.1
+        else -> 0.0
+    }
+}
+```
+
+### 💡 Tip 4: 범위와 step을 활용한 반복
+
+```kotlin
+// 짝수만 출력
+for (i in 0..10 step 2) {
+    println(i)  // 0, 2, 4, 6, 8, 10
+}
+
+// 홀수만 출력
+for (i in 1..10 step 2) {
+    println(i)  // 1, 3, 5, 7, 9
+}
+
+// 10배수만 출력
+for (i in 0..100 step 10) {
+    println(i)  // 0, 10, 20, ..., 100
+}
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 성적 등급 계산기
+점수를 입력받아 등급을 반환하는 함수를 when으로 작성하세요.
+- 90점 이상: A
+- 80점 이상: B
+- 70점 이상: C
+- 60점 이상: D
+- 60점 미만: F
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun getGrade(score: Int): String {
+    return when {
+        score >= 90 -> "A"
+        score >= 80 -> "B"
+        score >= 70 -> "C"
+        score >= 60 -> "D"
+        else -> "F"
+    }
+}
+
+fun main() {
+    println(getGrade(95))  // A
+    println(getGrade(85))  // B
+    println(getGrade(55))  // F
+}
+```
+</details>
+
+### 문제 2: 구구단 출력
+2단부터 9단까지 구구단을 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    for (dan in 2..9) {
+        println("=== ${dan}단 ===")
+        for (num in 1..9) {
+            println("$dan x $num = ${dan * num}")
+        }
+        println()
+    }
+}
+```
+</details>
+
+### 문제 3: 짝수의 합
+1부터 100까지의 짝수의 합을 구하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun main() {
+    var sum = 0
+
+    for (i in 2..100 step 2) {
+        sum += i
+    }
+
+    println("1부터 100까지 짝수의 합: $sum")  // 2550
+
+    // 또는 범위와 filter 사용
+    val sum2 = (1..100).filter { it % 2 == 0 }.sum()
+    println("합계: $sum2")
+}
+```
+</details>
+
+### 문제 4: 타입 판별기
+Any 타입의 객체를 받아서 타입을 판별하는 함수를 작성하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+fun describeType(obj: Any): String {
+    return when (obj) {
+        is String -> "문자열 (길이: ${obj.length})"
+        is Int -> "정수 ($obj)"
+        is Double -> "실수 ($obj)"
+        is Boolean -> "불리언 ($obj)"
+        is List<*> -> "리스트 (크기: ${obj.size})"
+        else -> "알 수 없는 타입: ${obj::class.simpleName}"
+    }
+}
+
+fun main() {
+    println(describeType("Hello"))        // 문자열 (길이: 5)
+    println(describeType(42))             // 정수 (42)
+    println(describeType(3.14))           // 실수 (3.14)
+    println(describeType(true))           // 불리언 (true)
+    println(describeType(listOf(1, 2)))   // 리스트 (크기: 2)
+}
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **if는 표현식**
+   - 값을 반환할 수 있음
+   - 삼항 연산자 대체
+
+2. **when은 강력한 switch**
+   - break 불필요
+   - 범위, 타입 체크 가능
+   - 조건식 사용 가능
+
+3. **Range (범위)**
+   - `1..10`: 1부터 10까지
+   - `1 until 10`: 1부터 9까지
+   - `10 downTo 1`: 역순
+   - `1..10 step 2`: 2씩 증가
+
+4. **for 루프**
+   - `for (i in range)`
+   - `withIndex()`로 인덱스 접근
+   - 레이블로 중첩 루프 제어
+
+---
+
+## 다음 챕터 예고
+
+Chapter 4에서는 **함수**를 다룹니다:
+- 함수 선언과 호출
+- 기본 파라미터 값
+- 이름있는 인자
+- 확장 함수
+- 중위 함수
+
+Kotlin의 함수는 Java보다 훨씬 강력하고 유연합니다!
+
+---
+
+[← 이전: Chapter 2. 기본 문법](../part1-getting-started/chapter2-basic-syntax.md) | [다음: Chapter 4. 함수 →](chapter4-functions.md)

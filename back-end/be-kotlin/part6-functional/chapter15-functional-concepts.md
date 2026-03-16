@@ -1,0 +1,672 @@
+# Chapter 15. 함수형 프로그래밍 개념
+
+## 개요
+
+함수형 프로그래밍(Functional Programming)은 함수를 1급 객체로 다루며, 불변성과 순수 함수를 중시하는 프로그래밍 패러다임입니다.
+
+---
+
+## 15.1 함수형 프로그래밍이란?
+
+### 핵심 개념
+
+1. **불변성 (Immutability)**: 데이터를 변경하지 않음
+2. **순수 함수 (Pure Functions)**: 부작용 없이 항상 같은 결과 반환
+3. **1급 함수 (First-class Functions)**: 함수를 값처럼 다룸
+4. **고차 함수 (Higher-order Functions)**: 함수를 인자로 받거나 반환
+
+---
+
+### 명령형 vs 함수형
+
+**명령형 (Imperative)**:
+```kotlin
+// 어떻게(How) 하는지 명시
+fun sumImperative(numbers: List<Int>): Int {
+    var sum = 0
+    for (number in numbers) {
+        sum += number
+    }
+    return sum
+}
+```
+
+**함수형 (Functional)**:
+```kotlin
+// 무엇을(What) 하는지 명시
+fun sumFunctional(numbers: List<Int>): Int {
+    return numbers.reduce { acc, n -> acc + n }
+}
+
+// 또는 더 간단하게
+fun sumFunctional2(numbers: List<Int>) = numbers.sum()
+```
+
+---
+
+## 15.2 불변성 (Immutability)
+
+### 불변 데이터의 장점
+
+```kotlin
+// ❌ 가변 (Mutable) - 예측하기 어려움
+class MutableCounter {
+    var count = 0
+
+    fun increment() {
+        count++  // 상태 변경
+    }
+}
+
+fun processCounter(counter: MutableCounter) {
+    counter.increment()  // 외부 상태 변경 (부작용)
+    // ...
+}
+
+// ✅ 불변 (Immutable) - 예측 가능
+data class ImmutableCounter(val count: Int) {
+    fun increment() = ImmutableCounter(count + 1)  // 새 객체 반환
+}
+
+fun processCounter(counter: ImmutableCounter): ImmutableCounter {
+    return counter.increment()  // 원본은 변경 안 됨
+}
+```
+
+---
+
+### 불변 컬렉션 활용
+
+```kotlin
+// ✅ 불변 컬렉션
+val numbers = listOf(1, 2, 3, 4, 5)
+
+// 변환 결과는 새 컬렉션
+val doubled = numbers.map { it * 2 }
+val filtered = numbers.filter { it > 2 }
+
+println(numbers)   // [1, 2, 3, 4, 5] - 원본 유지
+println(doubled)   // [2, 4, 6, 8, 10]
+println(filtered)  // [3, 4, 5]
+```
+
+---
+
+### 실전 예제: User 상태 업데이트
+
+```kotlin
+// ❌ 가변 방식
+data class MutableUser(
+    var name: String,
+    var email: String,
+    var age: Int
+)
+
+fun updateUser(user: MutableUser) {
+    user.email = "new@example.com"  // 원본 변경
+    user.age = 26
+}
+
+// ✅ 불변 방식
+data class User(
+    val name: String,
+    val email: String,
+    val age: Int
+)
+
+fun updateUser(user: User): User {
+    return user.copy(
+        email = "new@example.com",
+        age = 26
+    )  // 새 객체 반환
+}
+
+fun main() {
+    val original = User("Alice", "alice@example.com", 25)
+    val updated = updateUser(original)
+
+    println(original)  // User(name=Alice, email=alice@example.com, age=25)
+    println(updated)   // User(name=Alice, email=new@example.com, age=26)
+}
+```
+
+---
+
+## 15.3 순수 함수 (Pure Functions)
+
+### 순수 함수의 조건
+
+1. **같은 입력 → 같은 출력**
+2. **부작용(Side Effect) 없음**
+
+---
+
+### 순수 함수 예제
+
+```kotlin
+// ✅ 순수 함수
+fun add(a: Int, b: Int): Int {
+    return a + b  // 항상 같은 결과, 부작용 없음
+}
+
+fun multiply(numbers: List<Int>, factor: Int): List<Int> {
+    return numbers.map { it * factor }  // 원본 변경 안 함
+}
+
+// ❌ 순수하지 않은 함수
+var counter = 0
+
+fun impureIncrement(): Int {
+    counter++  // 외부 상태 변경 (부작용)
+    return counter
+}
+
+fun impureGetTime(): Long {
+    return System.currentTimeMillis()  // 호출마다 다른 결과
+}
+
+fun impurePrint(message: String) {
+    println(message)  // I/O는 부작용
+}
+```
+
+---
+
+### 순수 함수의 장점
+
+```kotlin
+// 테스트하기 쉬움
+fun calculateDiscount(price: Double, discountRate: Double): Double {
+    return price * (1 - discountRate)
+}
+
+// 테스트
+fun testCalculateDiscount() {
+    assert(calculateDiscount(100.0, 0.1) == 90.0)
+    assert(calculateDiscount(100.0, 0.2) == 80.0)
+    // 항상 예측 가능한 결과
+}
+
+// 병렬 처리 안전
+fun processInParallel(numbers: List<Int>): List<Int> {
+    return numbers.parallelStream()  // 순수 함수는 병렬 처리 안전
+        .map { it * 2 }
+        .toList()
+}
+```
+
+---
+
+### 부작용을 격리하기
+
+```kotlin
+// ❌ 부작용이 섞여있음
+fun saveAndNotify(user: User) {
+    database.save(user)        // I/O
+    emailService.send(user)    // I/O
+    logger.log("User saved")   // I/O
+}
+
+// ✅ 순수 함수와 부작용 분리
+data class UserSaveResult(
+    val user: User,
+    val emailRecipient: String,
+    val logMessage: String
+)
+
+// 순수 함수: 계산만
+fun prepareUserSave(user: User): UserSaveResult {
+    return UserSaveResult(
+        user = user,
+        emailRecipient = user.email,
+        logMessage = "User ${user.name} saved"
+    )
+}
+
+// 부작용은 한 곳에서만
+fun executeSideEffects(result: UserSaveResult) {
+    database.save(result.user)
+    emailService.send(result.emailRecipient)
+    logger.log(result.logMessage)
+}
+```
+
+---
+
+## 15.4 1급 함수 (First-class Functions)
+
+### 함수를 값처럼 다루기
+
+```kotlin
+// 함수를 변수에 할당
+val add: (Int, Int) -> Int = { a, b -> a + b }
+val multiply = { a: Int, b: Int -> a * b }
+
+// 함수를 인자로 전달
+fun calculate(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
+    return operation(a, b)
+}
+
+// 함수를 반환
+fun getOperation(type: String): (Int, Int) -> Int {
+    return when (type) {
+        "add" -> { a, b -> a + b }
+        "multiply" -> { a, b -> a * b }
+        else -> { a, b -> a }
+    }
+}
+
+fun main() {
+    println(add(3, 5))  // 8
+    println(calculate(3, 5, add))  // 8
+
+    val op = getOperation("multiply")
+    println(op(3, 5))  // 15
+}
+```
+
+---
+
+### 함수 합성 (Function Composition)
+
+```kotlin
+// 함수 합성 연산자
+infix fun <A, B, C> ((A) -> B).andThen(f: (B) -> C): (A) -> C {
+    return { a -> f(this(a)) }
+}
+
+infix fun <A, B, C> ((B) -> C).compose(f: (A) -> B): (A) -> C {
+    return { a -> this(f(a)) }
+}
+
+fun main() {
+    val addOne: (Int) -> Int = { it + 1 }
+    val double: (Int) -> Int = { it * 2 }
+
+    // andThen: f(g(x))
+    val addThenDouble = addOne andThen double
+    println(addThenDouble(3))  // (3 + 1) * 2 = 8
+
+    // compose: g(f(x))
+    val doubleThenAdd = addOne compose double
+    println(doubleThenAdd(3))  // (3 * 2) + 1 = 7
+}
+```
+
+---
+
+### 실전 예제: 파이프라인
+
+```kotlin
+fun <T, R> T.pipe(f: (T) -> R): R = f(this)
+
+fun main() {
+    val result = "hello"
+        .pipe { it.uppercase() }          // "HELLO"
+        .pipe { it.reversed() }           // "OLLEH"
+        .pipe { it.take(3) }              // "OLL"
+
+    println(result)  // OLL
+
+    // 숫자 파이프라인
+    val number = 5
+        .pipe { it * 2 }       // 10
+        .pipe { it + 3 }       // 13
+        .pipe { it.toString() } // "13"
+
+    println(number)  // 13
+}
+```
+
+---
+
+## 15.5 Java와 비교: 함수형 접근법
+
+### Stream API vs Kotlin 컬렉션
+
+**Java**:
+```java
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
+
+// 함수형 스타일
+int sum = numbers.stream()
+    .filter(n -> n % 2 == 0)
+    .map(n -> n * n)
+    .reduce(0, Integer::sum);
+
+// 명령형 스타일
+int sum2 = 0;
+for (int n : numbers) {
+    if (n % 2 == 0) {
+        sum2 += n * n;
+    }
+}
+```
+
+**Kotlin**:
+```kotlin
+val numbers = listOf(1, 2, 3, 4, 5)
+
+// 함수형 스타일 (더 간결)
+val sum = numbers
+    .filter { it % 2 == 0 }
+    .map { it * it }
+    .sum()
+
+// 또는 한 줄로
+val sum2 = numbers.filter { it % 2 == 0 }.sumOf { it * it }
+```
+
+---
+
+### Optional vs Nullable
+
+**Java**:
+```java
+Optional<String> name = Optional.ofNullable(getName());
+
+String result = name
+    .map(String::toUpperCase)
+    .orElse("UNKNOWN");
+```
+
+**Kotlin**:
+```kotlin
+val name: String? = getName()
+
+val result = name?.uppercase() ?: "UNKNOWN"
+```
+
+---
+
+## 실전 예제
+
+### 예제 1: 함수형 검증
+
+```kotlin
+typealias ValidationRule<T> = (T) -> Boolean
+
+data class ValidationResult(
+    val isValid: Boolean,
+    val errors: List<String>
+)
+
+fun <T> validate(
+    value: T,
+    rules: Map<String, ValidationRule<T>>
+): ValidationResult {
+    val errors = rules
+        .filter { (_, rule) -> !rule(value) }
+        .map { (message, _) -> message }
+
+    return ValidationResult(
+        isValid = errors.isEmpty(),
+        errors = errors
+    )
+}
+
+// 사용
+data class User(val name: String, val age: Int, val email: String)
+
+fun main() {
+    val rules = mapOf<String, ValidationRule<User>>(
+        "이름은 비어있을 수 없습니다" to { it.name.isNotBlank() },
+        "나이는 18세 이상이어야 합니다" to { it.age >= 18 },
+        "올바른 이메일 형식이어야 합니다" to { it.email.contains("@") }
+    )
+
+    val user1 = User("Alice", 25, "alice@example.com")
+    println(validate(user1, rules))
+    // ValidationResult(isValid=true, errors=[])
+
+    val user2 = User("", 15, "invalid")
+    println(validate(user2, rules))
+    // ValidationResult(isValid=false, errors=[이름은 비어있을 수 없습니다, 나이는 18세 이상이어야 합니다, ...])
+}
+```
+
+---
+
+### 예제 2: 함수형 변환 파이프라인
+
+```kotlin
+data class Product(val name: String, val price: Double, val category: String)
+
+fun main() {
+    val products = listOf(
+        Product("Laptop", 1200.0, "Electronics"),
+        Product("Mouse", 25.0, "Electronics"),
+        Product("Book", 15.0, "Books"),
+        Product("Pen", 2.0, "Stationery")
+    )
+
+    // 함수형 파이프라인
+    val result = products
+        .filter { it.category == "Electronics" }
+        .filter { it.price > 100 }
+        .map { it.copy(price = it.price * 0.9) }  // 10% 할인
+        .sortedByDescending { it.price }
+
+    result.forEach { println(it) }
+    // Product(name=Laptop, price=1080.0, category=Electronics)
+}
+```
+
+---
+
+### 예제 3: 메모이제이션 (캐싱)
+
+```kotlin
+fun <A, R> memoize(f: (A) -> R): (A) -> R {
+    val cache = mutableMapOf<A, R>()
+    return { a ->
+        cache.getOrPut(a) { f(a) }
+    }
+}
+
+// 사용
+fun fibonacci(n: Int): Int {
+    return when (n) {
+        0 -> 0
+        1 -> 1
+        else -> fibonacci(n - 1) + fibonacci(n - 2)
+    }
+}
+
+val memoizedFib = memoize { n: Int -> fibonacci(n) }
+
+fun main() {
+    println(memoizedFib(10))  // 계산
+    println(memoizedFib(10))  // 캐시에서 반환
+}
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 불변성 우선
+
+```kotlin
+// ✅ 좋은 예
+data class Order(val items: List<OrderItem>, val total: Double)
+
+fun addItem(order: Order, item: OrderItem): Order {
+    return order.copy(
+        items = order.items + item,
+        total = order.total + item.price
+    )
+}
+
+// ❌ 나쁜 예
+data class MutableOrder(var items: MutableList<OrderItem>, var total: Double)
+
+fun addItem(order: MutableOrder, item: OrderItem) {
+    order.items.add(item)
+    order.total += item.price
+}
+```
+
+---
+
+### 💡 Tip 2: 순수 함수로 비즈니스 로직
+
+```kotlin
+// ✅ 순수 함수로 계산
+fun calculateShippingCost(
+    weight: Double,
+    distance: Double,
+    isPremium: Boolean
+): Double {
+    val baseCost = weight * 0.5 + distance * 0.1
+    return if (isPremium) 0.0 else baseCost
+}
+
+// ❌ 부작용이 섞여있음
+fun calculateAndSaveShippingCost(order: Order) {
+    val cost = /* 계산 */
+    database.save(cost)  // 부작용!
+    logger.log("Cost calculated")  // 부작용!
+}
+```
+
+---
+
+### 💡 Tip 3: 함수 합성 활용
+
+```kotlin
+fun <T> List<T>.applyFilters(vararg filters: (T) -> Boolean): List<T> {
+    return filters.fold(this) { list, filter ->
+        list.filter(filter)
+    }
+}
+
+val products = listOf(/* ... */)
+
+val filtered = products.applyFilters(
+    { it.price > 100 },
+    { it.category == "Electronics" },
+    { it.inStock }
+)
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 순수 함수로 변환
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+// 명령형
+fun imperativeSum(numbers: List<Int>): Int {
+    var sum = 0
+    for (number in numbers) {
+        if (number > 0) {
+            sum += number * 2
+        }
+    }
+    return sum
+}
+
+// 함수형
+fun functionalSum(numbers: List<Int>): Int {
+    return numbers
+        .filter { it > 0 }
+        .map { it * 2 }
+        .sum()
+}
+
+fun main() {
+    val numbers = listOf(-1, 2, -3, 4, 5)
+    println(imperativeSum(numbers))  // 22
+    println(functionalSum(numbers))  // 22
+}
+```
+</details>
+
+### 문제 2: 불변 장바구니 구현
+
+<details>
+<summary>정답 보기</summary>
+
+```kotlin
+data class CartItem(val productId: String, val quantity: Int, val price: Double)
+data class ShoppingCart(val items: List<CartItem>) {
+    val total: Double
+        get() = items.sumOf { it.quantity * it.price }
+
+    fun addItem(item: CartItem): ShoppingCart {
+        val existingItem = items.find { it.productId == item.productId }
+        return if (existingItem != null) {
+            val newItems = items.map {
+                if (it.productId == item.productId) {
+                    it.copy(quantity = it.quantity + item.quantity)
+                } else {
+                    it
+                }
+            }
+            copy(items = newItems)
+        } else {
+            copy(items = items + item)
+        }
+    }
+
+    fun removeItem(productId: String): ShoppingCart {
+        return copy(items = items.filter { it.productId != productId })
+    }
+}
+
+fun main() {
+    val cart = ShoppingCart(emptyList())
+
+    val cart2 = cart.addItem(CartItem("P001", 2, 10.0))
+    val cart3 = cart2.addItem(CartItem("P002", 1, 25.0))
+
+    println(cart.total)   // 0.0
+    println(cart2.total)  // 20.0
+    println(cart3.total)  // 45.0
+}
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **불변성**
+   - `val` 사용
+   - 불변 컬렉션
+   - `copy()` 활용
+
+2. **순수 함수**
+   - 같은 입력 → 같은 출력
+   - 부작용 없음
+   - 테스트 용이
+
+3. **1급 함수**
+   - 함수를 값처럼 다룸
+   - 고차 함수
+   - 함수 합성
+
+4. **장점**
+   - 예측 가능
+   - 테스트 쉬움
+   - 병렬 처리 안전
+
+---
+
+## 다음 챕터 예고
+
+Chapter 16에서는 **스코프 함수**를 다룹니다:
+- let, run, with, apply, also
+- 각 함수의 차이점과 용도
+- 실전 활용 패턴
+
+---
+
+[← 이전: Chapter 14. 연산자 오버로딩](../part5-advanced/chapter14-operator-overloading.md) | [다음: Chapter 16. 스코프 함수 →](chapter16-scope-functions.md)
