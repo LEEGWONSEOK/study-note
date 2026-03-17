@@ -13,13 +13,13 @@
 ## 📚 목차
 
 ### Part 1: Python 시작하기
-- [Chapter 1. Python 소개](part1-getting-started/chapter1-introduction.md)
+- [Chapter 1. Python 소개](part01-getting-started/chapter1-introduction.md)
   - Python이란?
   - Java vs Python 비교
   - 개발 환경 설정 (Python, pip, venv)
   - 첫 Python 프로그램
 
-- [Chapter 2. 기본 문법](part1-getting-started/chapter2-basic-syntax.md)
+- [Chapter 2. 기본 문법](part01-getting-started/chapter2-basic-syntax.md)
   - 변수와 타입
   - 들여쓰기 (Indentation)
   - 주석과 Docstring
@@ -29,21 +29,21 @@
 
 ### Part 2: 기본 문법
 
-- [Chapter 3. 데이터 타입](part2-basic-syntax/chapter3-data-types.md)
+- [Chapter 3. 데이터 타입](part02-basic-syntax/chapter3-data-types.md)
   - 숫자 (int, float, complex)
   - 문자열 (str)
   - 불린 (bool)
   - None 타입
   - 타입 변환
 
-- [Chapter 4. 컬렉션](part2-basic-syntax/chapter4-collections.md)
+- [Chapter 4. 컬렉션](part02-basic-syntax/chapter4-collections.md)
   - 리스트 (List)
   - 튜플 (Tuple)
   - 딕셔너리 (Dict)
   - 셋 (Set)
   - 컬렉션 연산
 
-- [Chapter 5. 제어 흐름](part2-basic-syntax/chapter5-control-flow.md)
+- [Chapter 5. 제어 흐름](part02-basic-syntax/chapter5-control-flow.md)
   - if/elif/else
   - for 루프
   - while 루프
@@ -54,21 +54,21 @@
 
 ### Part 3: 함수와 모듈
 
-- [Chapter 6. 함수](part3-functions-modules/chapter6-functions.md)
+- [Chapter 6. 함수](part03-functions-modules/chapter6-functions.md)
   - 함수 정의
   - 매개변수 (위치, 키워드, 기본값, 가변)
   - 반환값
   - Lambda 함수
   - 데코레이터
 
-- [Chapter 7. 모듈과 패키지](part3-functions-modules/chapter7-modules-packages.md)
+- [Chapter 7. 모듈과 패키지](part03-functions-modules/chapter7-modules-packages.md)
   - 모듈 import
   - 패키지 구조
   - `__init__.py`
   - 표준 라이브러리
   - pip와 패키지 관리
 
-- [Chapter 8. 파일 처리](part3-functions-modules/chapter8-file-handling.md)
+- [Chapter 8. 파일 처리](part03-functions-modules/chapter8-file-handling.md)
   - 파일 읽기/쓰기
   - with 문
   - CSV, JSON 처리
@@ -78,20 +78,20 @@
 
 ### Part 4: 객체지향 프로그래밍
 
-- [Chapter 9. 클래스 기초](part4-oop/chapter9-classes-basics.md)
+- [Chapter 9. 클래스 기초](part04-oop/chapter9-classes-basics.md)
   - 클래스와 객체
   - `__init__` 생성자
   - 인스턴스 변수 vs 클래스 변수
   - 메서드 (인스턴스, 클래스, 정적)
 
-- [Chapter 10. 상속과 다형성](part4-oop/chapter10-inheritance.md)
+- [Chapter 10. 상속과 다형성](part04-oop/chapter10-inheritance.md)
   - 상속 (Inheritance)
   - 메서드 오버라이딩
   - super()
   - 다중 상속 (MRO)
   - 추상 클래스 (ABC)
 
-- [Chapter 11. 특수 메서드](part4-oop/chapter11-special-methods.md)
+- [Chapter 11. 특수 메서드](part04-oop/chapter11-special-methods.md)
   - `__str__`, `__repr__`
   - `__len__`, `__getitem__`
   - `__eq__`, `__lt__` (비교 연산)
@@ -102,21 +102,21 @@
 
 ### Part 5: 고급 기능
 
-- [Chapter 12. 예외 처리](part5-advanced/chapter12-exception-handling.md)
+- [Chapter 12. 예외 처리](part05-advanced/chapter12-exception-handling.md)
   - try/except/finally
   - 예외 타입
   - raise
   - 커스텀 예외
   - 예외 체이닝
 
-- [Chapter 13. 이터레이터와 제너레이터](part5-advanced/chapter13-iterators-generators.md)
+- [Chapter 13. 이터레이터와 제너레이터](part05-advanced/chapter13-iterators-generators.md)
   - 이터레이터 프로토콜
   - `__iter__`, `__next__`
   - 제너레이터 (yield)
   - 제너레이터 표현식
   - itertools
 
-- [Chapter 14. 컴프리헨션](part5-advanced/chapter14-comprehensions.md)
+- [Chapter 14. 컴프리헨션](part05-advanced/chapter14-comprehensions.md)
   - 리스트 컴프리헨션
   - 딕셔너리 컴프리헨션
   - 셋 컴프리헨션
@@ -127,21 +127,21 @@
 
 ### Part 6: 함수형 프로그래밍
 
-- [Chapter 15. 함수형 개념](part6-functional/chapter15-functional-concepts.md)
+- [Chapter 15. 함수형 개념](part06-functional/chapter15-functional-concepts.md)
   - 일급 함수 (First-class Function)
   - 순수 함수
   - map, filter, reduce
   - functools
   - partial, lru_cache
 
-- [Chapter 16. 데코레이터 심화](part6-functional/chapter16-decorators.md)
+- [Chapter 16. 데코레이터 심화](part06-functional/chapter16-decorators.md)
   - 함수 데코레이터
   - 클래스 데코레이터
   - 매개변수가 있는 데코레이터
   - functools.wraps
   - 실전 예제 (로깅, 타이밍, 캐싱)
 
-- [Chapter 17. 타입 힌트](part6-functional/chapter17-type-hints.md)
+- [Chapter 17. 타입 힌트](part06-functional/chapter17-type-hints.md)
   - 타입 힌트 기초
   - typing 모듈
   - Generic, TypeVar
@@ -152,21 +152,21 @@
 
 ### Part 7: 동시성 프로그래밍
 
-- [Chapter 18. 멀티스레딩](part7-concurrency/chapter18-multithreading.md)
+- [Chapter 18. 멀티스레딩](part07-concurrency/chapter18-multithreading.md)
   - threading 모듈
   - Thread 클래스
   - Lock, RLock
   - GIL (Global Interpreter Lock)
   - 스레드 풀
 
-- [Chapter 19. 멀티프로세싱](part7-concurrency/chapter19-multiprocessing.md)
+- [Chapter 19. 멀티프로세싱](part07-concurrency/chapter19-multiprocessing.md)
   - multiprocessing 모듈
   - Process 클래스
   - Pool
   - Queue, Pipe
   - 프로세스 간 통신
 
-- [Chapter 20. 비동기 프로그래밍 (asyncio)](part7-concurrency/chapter20-asyncio.md)
+- [Chapter 20. 비동기 프로그래밍 (asyncio)](part07-concurrency/chapter20-asyncio.md)
   - async/await
   - 코루틴
   - asyncio.run()
@@ -353,7 +353,7 @@
 
 ## 🚀 시작하기
 
-[Part 1: Python 시작하기 →](part1-getting-started/chapter1-introduction.md)
+[Part 1: Python 시작하기 →](part01-getting-started/chapter1-introduction.md)
 
 ---
 
