@@ -1,0 +1,695 @@
+# Chapter 27. 보안 (Spring Security)
+
+## 27.1 Spring Security 기본
+
+### 의존성 추가
+
+**build.gradle.kts**:
+```kotlin
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.security:spring-security-test")
+}
+```
+
+추가 즉시 모든 endpoint가 보호됩니다!
+
+---
+
+## 27.2 기본 설정
+
+### SecurityFilterChain
+
+```kotlin
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.config.http.SessionCreationPolicy
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig {
+
+    @Bean
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .csrf { it.disable() }
+            .authorizeHttpRequests { auth ->
+                auth
+                    .requestMatchers("/api/public/**").permitAll()
+                    .requestMatchers("/actuator/**").permitAll()
+                    .anyRequest().authenticated()
+            }
+            .formLogin { it.disable() }
+            .httpBasic { }
+
+        return http.build()
+    }
+}
+```
+
+---
+
+## 27.3 In-Memory 사용자
+
+### UserDetailsService
+
+```kotlin
+import org.springframework.context.annotation.Bean
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.provisioning.InMemoryUserDetailsManager
+
+@Configuration
+class SecurityConfig {
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+
+    @Bean
+    fun userDetailsService(passwordEncoder: PasswordEncoder): UserDetailsService {
+        val user = User.builder()
+            .username("user")
+            .password(passwordEncoder.encode("password"))
+            .roles("USER")
+            .build()
+
+        val admin = User.builder()
+            .username("admin")
+            .password(passwordEncoder.encode("admin"))
+            .roles("USER", "ADMIN")
+            .build()
+
+        return InMemoryUserDetailsManager(user, admin)
+    }
+}
+```
+
+---
+
+## 27.4 Database 기반 인증
+
+### User Entity
+
+```kotlin
+import jakarta.persistence.*
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetails
+
+@Entity
+@Table(name = "users")
+class User(
+    @Column(unique = true, nullable = false)
+    private var username: String,
+
+    @Column(nullable = false)
+    private var password: String,
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = [JoinColumn(name = "user_id")])
+    @Column(name = "role")
+    var roles: MutableSet<String> = mutableSetOf(),
+
+    var enabled: Boolean = true,
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long = 0
+) : UserDetails {
+
+    override fun getAuthorities(): Collection<GrantedAuthority> =
+        roles.map { SimpleGrantedAuthority("ROLE_$it") }
+
+    override fun getPassword(): String = password
+
+    override fun getUsername(): String = username
+
+    override fun isAccountNonExpired(): Boolean = true
+
+    override fun isAccountNonLocked(): Boolean = true
+
+    override fun isCredentialsNonExpired(): Boolean = true
+
+    override fun isEnabled(): Boolean = enabled
+}
+```
+
+---
+
+### Repository & Service
+
+```kotlin
+interface UserRepository : JpaRepository<User, Long> {
+    fun findByUsername(username: String): User?
+}
+
+@Service
+class CustomUserDetailsService(
+    private val userRepository: UserRepository
+) : UserDetailsService {
+
+    override fun loadUserByUsername(username: String): UserDetails =
+        userRepository.findByUsername(username)
+            ?: throw UsernameNotFoundException("User not found: $username")
+}
+```
+
+---
+
+### Security Config
+
+```kotlin
+@Configuration
+@EnableWebSecurity
+class SecurityConfig(
+    private val userDetailsService: CustomUserDetailsService
+) {
+
+    @Bean
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .csrf { it.disable() }
+            .authorizeHttpRequests { auth ->
+                auth
+                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                    .anyRequest().authenticated()
+            }
+            .userDetailsService(userDetailsService)
+            .httpBasic { }
+
+        return http.build()
+    }
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+}
+```
+
+---
+
+## 27.5 JWT 인증
+
+### 의존성
+
+**build.gradle.kts**:
+```kotlin
+dependencies {
+    implementation("io.jsonwebtoken:jjwt-api:0.12.3")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
+}
+```
+
+---
+
+### JwtUtil
+
+```kotlin
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.SignatureAlgorithm
+import io.jsonwebtoken.security.Keys
+import org.springframework.stereotype.Component
+import java.util.*
+
+@Component
+class JwtUtil {
+
+    private val secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
+    private val expirationMs = 86400000L  // 24시간
+
+    fun generateToken(username: String): String {
+        val now = Date()
+        val expiryDate = Date(now.time + expirationMs)
+
+        return Jwts.builder()
+            .setSubject(username)
+            .setIssuedAt(now)
+            .setExpiration(expiryDate)
+            .signWith(secretKey)
+            .compact()
+    }
+
+    fun getUsernameFromToken(token: String): String {
+        return Jwts.parserBuilder()
+            .setSigningKey(secretKey)
+            .build()
+            .parseClaimsJws(token)
+            .body
+            .subject
+    }
+
+    fun validateToken(token: String): Boolean {
+        return try {
+            Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+}
+```
+
+---
+
+### JwtAuthenticationFilter
+
+```kotlin
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
+import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
+
+@Component
+class JwtAuthenticationFilter(
+    private val jwtUtil: JwtUtil,
+    private val userDetailsService: UserDetailsService
+) : OncePerRequestFilter() {
+
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain
+    ) {
+        val authHeader = request.getHeader("Authorization")
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            val token = authHeader.substring(7)
+
+            if (jwtUtil.validateToken(token)) {
+                val username = jwtUtil.getUsernameFromToken(token)
+                val userDetails = userDetailsService.loadUserByUsername(username)
+
+                val authentication = UsernamePasswordAuthenticationToken(
+                    userDetails,
+                    null,
+                    userDetails.authorities
+                )
+                authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+
+                SecurityContextHolder.getContext().authentication = authentication
+            }
+        }
+
+        filterChain.doFilter(request, response)
+    }
+}
+```
+
+---
+
+### Security Config (JWT)
+
+```kotlin
+@Configuration
+@EnableWebSecurity
+class SecurityConfig(
+    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+    private val userDetailsService: UserDetailsService
+) {
+
+    @Bean
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .csrf { it.disable() }
+            .authorizeHttpRequests { auth ->
+                auth
+                    .requestMatchers("/api/auth/**").permitAll()
+                    .anyRequest().authenticated()
+            }
+            .sessionManagement {
+                it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            }
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+
+        return http.build()
+    }
+
+    @Bean
+    fun authenticationManager(config: AuthenticationConfiguration): AuthenticationManager =
+        config.authenticationManager
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+}
+```
+
+---
+
+### Auth Controller
+
+```kotlin
+@RestController
+@RequestMapping("/api/auth")
+class AuthController(
+    private val authenticationManager: AuthenticationManager,
+    private val userDetailsService: UserDetailsService,
+    private val jwtUtil: JwtUtil,
+    private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder
+) {
+
+    @PostMapping("/login")
+    fun login(@RequestBody request: LoginRequest): LoginResponse {
+        authenticationManager.authenticate(
+            UsernamePasswordAuthenticationToken(request.username, request.password)
+        )
+
+        val userDetails = userDetailsService.loadUserByUsername(request.username)
+        val token = jwtUtil.generateToken(userDetails.username)
+
+        return LoginResponse(token)
+    }
+
+    @PostMapping("/register")
+    fun register(@RequestBody request: RegisterRequest): MessageResponse {
+        if (userRepository.findByUsername(request.username) != null) {
+            throw IllegalArgumentException("Username already exists")
+        }
+
+        val user = User(
+            username = request.username,
+            password = passwordEncoder.encode(request.password),
+            roles = mutableSetOf("USER")
+        )
+
+        userRepository.save(user)
+
+        return MessageResponse("User registered successfully")
+    }
+}
+
+data class LoginRequest(
+    val username: String,
+    val password: String
+)
+
+data class LoginResponse(
+    val token: String
+)
+
+data class RegisterRequest(
+    val username: String,
+    val password: String
+)
+
+data class MessageResponse(
+    val message: String
+)
+```
+
+---
+
+## 27.6 메서드 보안
+
+### @PreAuthorize, @PostAuthorize
+
+**설정**:
+```kotlin
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+
+@Configuration
+@EnableMethodSecurity(prePostEnabled = true)
+class SecurityConfig {
+    // ...
+}
+```
+
+**사용**:
+```kotlin
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.access.prepost.PostAuthorize
+
+@Service
+class UserService(
+    private val userRepository: UserRepository
+) {
+
+    @PreAuthorize("hasRole('ADMIN')")
+    fun deleteUser(id: Long) {
+        userRepository.deleteById(id)
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    fun findAll(): List<UserDto> =
+        userRepository.findAll().map { it.toDto() }
+
+    @PreAuthorize("hasRole('ADMIN') or #username == authentication.principal.username")
+    fun updateUser(username: String, request: UpdateUserRequest): UserDto {
+        // 관리자이거나 본인만 수정 가능
+        // ...
+    }
+
+    @PostAuthorize("returnObject.username == authentication.principal.username")
+    fun getUserProfile(id: Long): UserDto {
+        // 본인 프로필만 조회 가능
+        // ...
+    }
+}
+```
+
+---
+
+## 27.7 CORS 설정
+
+```kotlin
+@Configuration
+class WebConfig {
+
+    @Bean
+    fun corsConfigurer(): WebMvcConfigurer {
+        return object : WebMvcConfigurer {
+            override fun addCorsMappings(registry: CorsRegistry) {
+                registry.addMapping("/api/**")
+                    .allowedOrigins("http://localhost:3000")
+                    .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
+                    .allowedHeaders("*")
+                    .allowCredentials(true)
+                    .maxAge(3600)
+            }
+        }
+    }
+}
+```
+
+또는 Security Config에서:
+
+```kotlin
+@Bean
+fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    http
+        .cors { }  // CORS 활성화
+        .csrf { it.disable() }
+        // ...
+
+    return http.build()
+}
+```
+
+---
+
+## 27.8 현재 사용자 정보 가져오기
+
+### SecurityContextHolder
+
+```kotlin
+import org.springframework.security.core.context.SecurityContextHolder
+
+@Service
+class UserService {
+
+    fun getCurrentUser(): UserDetails {
+        val authentication = SecurityContextHolder.getContext().authentication
+        return authentication.principal as UserDetails
+    }
+
+    fun getCurrentUsername(): String {
+        return getCurrentUser().username
+    }
+}
+```
+
+---
+
+### @AuthenticationPrincipal
+
+```kotlin
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.userdetails.UserDetails
+
+@RestController
+@RequestMapping("/api/users")
+class UserController(
+    private val userService: UserService
+) {
+
+    @GetMapping("/me")
+    fun getCurrentUser(@AuthenticationPrincipal userDetails: UserDetails): UserDto {
+        return userService.getUserByUsername(userDetails.username)
+    }
+
+    @PutMapping("/me")
+    fun updateCurrentUser(
+        @AuthenticationPrincipal userDetails: UserDetails,
+        @RequestBody request: UpdateUserRequest
+    ): UserDto {
+        return userService.updateUser(userDetails.username, request)
+    }
+}
+```
+
+---
+
+## 27.9 비밀번호 재설정
+
+### Service
+
+```kotlin
+@Service
+class PasswordResetService(
+    private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder
+) {
+
+    private val resetTokens = mutableMapOf<String, String>()  // 실제로는 Redis 사용 권장
+
+    fun requestPasswordReset(email: String): String {
+        val user = userRepository.findByEmail(email)
+            ?: throw UserNotFoundException("User not found")
+
+        val token = UUID.randomUUID().toString()
+        resetTokens[token] = user.username
+
+        // 이메일 발송 (생략)
+
+        return token
+    }
+
+    fun resetPassword(token: String, newPassword: String) {
+        val username = resetTokens[token]
+            ?: throw IllegalArgumentException("Invalid token")
+
+        val user = userRepository.findByUsername(username)
+            ?: throw UserNotFoundException("User not found")
+
+        user.password = passwordEncoder.encode(newPassword)
+        userRepository.save(user)
+
+        resetTokens.remove(token)
+    }
+}
+```
+
+---
+
+## 27.10 실전 팁
+
+### 💡 Tip 1: PasswordEncoder Bean
+
+```kotlin
+// ✅ Bean으로 등록
+@Bean
+fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+
+// 사용
+class UserService(
+    private val passwordEncoder: PasswordEncoder
+) {
+    fun register(request: RegisterRequest) {
+        val encoded = passwordEncoder.encode(request.password)
+        // ...
+    }
+}
+```
+
+---
+
+### 💡 Tip 2: 테스트에서 인증
+
+```kotlin
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+
+@WebMvcTest(UserController::class)
+class UserControllerTest {
+
+    @Autowired
+    private lateinit var mockMvc: MockMvc
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `admin can delete users`() {
+        mockMvc.perform(delete("/api/users/1"))
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    @WithMockUser(roles = ["USER"])
+    fun `user cannot delete users`() {
+        mockMvc.perform(delete("/api/users/1"))
+            .andExpect(status().isForbidden)
+    }
+}
+```
+
+---
+
+### 💡 Tip 3: JWT 만료 시간 설정
+
+```kotlin
+// application.yml
+jwt:
+  secret: your-secret-key
+  expiration: 86400000  # 24시간
+
+// JwtUtil
+@Component
+class JwtUtil(
+    @Value("\${jwt.secret}") private val secret: String,
+    @Value("\${jwt.expiration}") private val expirationMs: Long
+) {
+    // ...
+}
+```
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **SecurityFilterChain**
+   - `authorizeHttpRequests`
+   - `csrf`, `cors`
+
+2. **UserDetailsService**
+   - `loadUserByUsername`
+   - Database 기반 인증
+
+3. **JWT**
+   - `JwtUtil`
+   - `JwtAuthenticationFilter`
+
+4. **메서드 보안**
+   - `@PreAuthorize`
+   - `@PostAuthorize`
+
+5. **현재 사용자**
+   - `SecurityContextHolder`
+   - `@AuthenticationPrincipal`
+
+---
+
+[← 이전](chapter26-logging-monitoring.md) | [다음: Chapter 28 →](chapter28-deployment.md)

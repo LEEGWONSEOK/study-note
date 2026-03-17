@@ -1,0 +1,869 @@
+# Chapter 15. 함수형 프로그래밍 (Functional Programming)
+
+## 15.1 함수형 프로그래밍이란?
+
+> 🧮 **비유**: 함수형 프로그래밍은 **수학 공식**입니다.
+> - 같은 입력 → 항상 같은 출력
+> - 부작용(side effect) 없음
+> - 불변성(immutability)
+
+**함수형 프로그래밍**: 함수를 **일급 객체**로 다루고, **순수 함수**와 **불변 데이터**를 중심으로 프로그래밍
+
+---
+
+### 명령형 vs 함수형
+
+**명령형 (Imperative)**:
+```python
+# "어떻게(How)" 할지 명시
+numbers = [1, 2, 3, 4, 5]
+result = []
+
+for num in numbers:
+    if num % 2 == 0:
+        result.append(num * 2)
+
+print(result)  # [4, 8]
+```
+
+**함수형 (Functional)**:
+```python
+# "무엇을(What)" 할지 선언
+numbers = [1, 2, 3, 4, 5]
+
+result = list(map(lambda x: x * 2, filter(lambda x: x % 2 == 0, numbers)))
+print(result)  # [4, 8]
+
+# 또는 리스트 컴프리헨션 (더 Pythonic)
+result = [x * 2 for x in numbers if x % 2 == 0]
+```
+
+---
+
+## 15.2 순수 함수 (Pure Functions)
+
+> 🔬 **비유**: 순수 함수는 **실험실의 화학 실험**
+> - 같은 재료(입력) → 항상 같은 결과(출력)
+> - 실험실 밖에 영향 없음 (부작용 없음)
+
+**순수 함수 조건**:
+1. 같은 입력 → 항상 같은 출력
+2. 부작용(side effect) 없음
+
+---
+
+### 순수 함수 예제
+
+```python
+# ✅ 순수 함수
+def add(a, b):
+    """항상 같은 입력에 같은 결과"""
+    return a + b
+
+print(add(2, 3))  # 5
+print(add(2, 3))  # 5 (항상 동일)
+
+# ✅ 순수 함수
+def multiply_list(numbers, factor):
+    """새 리스트 반환 (원본 변경 안 함)"""
+    return [x * factor for x in numbers]
+
+nums = [1, 2, 3]
+result = multiply_list(nums, 2)
+print(nums)    # [1, 2, 3] (원본 그대로)
+print(result)  # [2, 4, 6]
+```
+
+---
+
+### 비순수 함수 예제
+
+```python
+# ❌ 비순수 함수 (부작용 있음)
+total = 0
+
+def add_to_total(value):
+    """전역 변수 수정 (부작용!)"""
+    global total
+    total += value
+    return total
+
+print(add_to_total(5))  # 5
+print(add_to_total(5))  # 10 (같은 입력, 다른 출력!)
+
+# ❌ 비순수 함수 (원본 수정)
+def multiply_list_bad(numbers, factor):
+    """원본 리스트 수정 (부작용!)"""
+    for i in range(len(numbers)):
+        numbers[i] *= factor
+    return numbers
+
+nums = [1, 2, 3]
+result = multiply_list_bad(nums, 2)
+print(nums)    # [2, 4, 6] (원본 변경됨!)
+print(result)  # [2, 4, 6]
+```
+
+---
+
+## 15.3 일급 함수 (First-Class Functions)
+
+> 🎭 **비유**: 함수도 **배우**처럼 다양한 역할
+> - 변수에 할당
+> - 인수로 전달
+> - 반환값으로 사용
+
+```python
+# 1. 변수에 할당
+def greet(name):
+    return f"Hello, {name}!"
+
+say_hello = greet
+print(say_hello("Alice"))  # Hello, Alice!
+
+# 2. 리스트에 저장
+operations = [
+    lambda x: x + 10,
+    lambda x: x * 2,
+    lambda x: x ** 2
+]
+
+for op in operations:
+    print(op(5))  # 15, 10, 25
+
+# 3. 함수를 인수로 전달
+def apply_operation(func, value):
+    return func(value)
+
+result = apply_operation(lambda x: x * 2, 10)
+print(result)  # 20
+
+# 4. 함수를 반환
+def create_multiplier(factor):
+    def multiplier(x):
+        return x * factor
+    return multiplier
+
+double = create_multiplier(2)
+triple = create_multiplier(3)
+
+print(double(5))  # 10
+print(triple(5))  # 15
+```
+
+---
+
+## 15.4 고차 함수 (Higher-Order Functions)
+
+> 🎪 **비유**: 고차 함수는 **감독**
+> - 다른 함수를 지휘
+> - 함수를 받거나 반환
+
+**고차 함수**: 함수를 인수로 받거나 함수를 반환하는 함수
+
+---
+
+### map() - 변환
+
+> 🏭 **비유**: **공장 컨베이어 벨트**
+> - 각 아이템에 동일한 작업 적용
+
+```python
+# 기본 사용
+numbers = [1, 2, 3, 4, 5]
+squared = map(lambda x: x ** 2, numbers)
+print(list(squared))  # [1, 4, 9, 16, 25]
+
+# 여러 이터러블
+numbers1 = [1, 2, 3]
+numbers2 = [10, 20, 30]
+sums = map(lambda x, y: x + y, numbers1, numbers2)
+print(list(sums))  # [11, 22, 33]
+
+# 문자열 변환
+names = ["alice", "bob", "charlie"]
+capitalized = map(str.capitalize, names)
+print(list(capitalized))  # ['Alice', 'Bob', 'Charlie']
+
+# vs 리스트 컴프리헨션 (더 Pythonic)
+squared = [x ** 2 for x in numbers]
+```
+
+---
+
+### filter() - 필터링
+
+> 🔍 **비유**: **체질 검사기**
+> - 조건 통과한 것만 남김
+
+```python
+# 기본 사용
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+evens = filter(lambda x: x % 2 == 0, numbers)
+print(list(evens))  # [2, 4, 6, 8, 10]
+
+# 문자열 필터링
+words = ["apple", "banana", "cherry", "date"]
+long_words = filter(lambda w: len(w) > 5, words)
+print(list(long_words))  # ['banana', 'cherry']
+
+# None 제거
+values = [1, None, 2, None, 3, 0, 4]
+non_none = filter(None, values)  # Truthy 값만
+print(list(non_none))  # [1, 2, 3, 4]
+
+# vs 리스트 컴프리헨션
+evens = [x for x in numbers if x % 2 == 0]
+```
+
+---
+
+### reduce() - 누적
+
+> 📊 **비유**: **누적 계산기**
+> - 값들을 하나씩 누적하여 최종 결과
+
+```python
+from functools import reduce
+
+# 합계
+numbers = [1, 2, 3, 4, 5]
+total = reduce(lambda x, y: x + y, numbers)
+print(total)  # 15
+
+# 동작 과정:
+# 1 + 2 = 3
+# 3 + 3 = 6
+# 6 + 4 = 10
+# 10 + 5 = 15
+
+# 곱셈
+product = reduce(lambda x, y: x * y, numbers)
+print(product)  # 120
+
+# 최대값
+maximum = reduce(lambda x, y: x if x > y else y, numbers)
+print(maximum)  # 5
+
+# 초기값 지정
+total = reduce(lambda x, y: x + y, numbers, 100)
+print(total)  # 115 (100 + 15)
+
+# vs 내장 함수 (더 명확)
+total = sum(numbers)
+product = 1
+for num in numbers:
+    product *= num
+```
+
+---
+
+## 15.5 람다 표현식
+
+> ⚡ **비유**: 람다는 **일회용 도구**
+> - 간단한 함수
+> - 이름 없음 (익명)
+
+```python
+# 일반 함수
+def square(x):
+    return x ** 2
+
+# 람다
+square_lambda = lambda x: x ** 2
+
+print(square(5))         # 25
+print(square_lambda(5))  # 25
+
+# 여러 매개변수
+add = lambda x, y: x + y
+print(add(10, 5))  # 15
+
+# 조건 표현식
+max_val = lambda x, y: x if x > y else y
+print(max_val(10, 20))  # 20
+```
+
+---
+
+### 람다 활용 예제
+
+```python
+# 1. 정렬 키
+students = [
+    {"name": "Alice", "score": 85},
+    {"name": "Bob", "score": 92},
+    {"name": "Charlie", "score": 78}
+]
+
+# 점수 순 정렬
+sorted_students = sorted(students, key=lambda s: s["score"], reverse=True)
+for s in sorted_students:
+    print(f"{s['name']}: {s['score']}")
+# Bob: 92
+# Alice: 85
+# Charlie: 78
+
+# 2. 조건부 변환
+numbers = [1, 2, 3, 4, 5]
+result = list(map(lambda x: x * 2 if x % 2 == 0 else x, numbers))
+print(result)  # [1, 4, 3, 8, 5]
+
+# 3. 딕셔너리 정렬
+data = {"c": 3, "a": 1, "b": 2}
+sorted_items = sorted(data.items(), key=lambda item: item[1])
+print(dict(sorted_items))  # {'a': 1, 'b': 2, 'c': 3}
+```
+
+---
+
+### 람다 사용 시 주의사항
+
+```python
+# ❌ 복잡한 람다 (가독성 나쁨)
+complex_lambda = lambda x: x ** 2 if x > 0 else -x ** 2 if x < 0 else 0
+
+# ✅ 일반 함수 사용
+def process_number(x):
+    if x > 0:
+        return x ** 2
+    elif x < 0:
+        return -x ** 2
+    else:
+        return 0
+
+# 람다는 간단한 경우에만!
+```
+
+---
+
+## 15.6 functools 모듈
+
+### partial() - 부분 적용
+
+> 🔧 **비유**: **맞춤 도구 만들기**
+> - 기존 함수의 일부 인수 고정
+
+```python
+from functools import partial
+
+# 기본 함수
+def power(base, exponent):
+    return base ** exponent
+
+# 일부 인수 고정
+square = partial(power, exponent=2)
+cube = partial(power, exponent=3)
+
+print(square(5))  # 25 (5 ** 2)
+print(cube(5))    # 125 (5 ** 3)
+
+# 실전 예제: 로깅
+def log(level, message):
+    print(f"[{level}] {message}")
+
+# 레벨별 함수 생성
+info = partial(log, "INFO")
+error = partial(log, "ERROR")
+
+info("서버 시작")    # [INFO] 서버 시작
+error("에러 발생")   # [ERROR] 에러 발생
+```
+
+---
+
+### lru_cache() - 메모이제이션
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=128)
+def fibonacci(n):
+    """피보나치 (캐싱)"""
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# 매우 빠름!
+print(fibonacci(100))
+print(fibonacci.cache_info())
+# CacheInfo(hits=98, misses=101, maxsize=128, currsize=101)
+
+# 캐시 초기화
+fibonacci.cache_clear()
+```
+
+---
+
+### wraps() - 데코레이터 메타데이터 보존
+
+```python
+from functools import wraps
+
+def my_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@my_decorator
+def greet(name):
+    """인사 함수"""
+    return f"Hello, {name}"
+
+print(greet.__name__)  # greet (보존됨)
+print(greet.__doc__)   # 인사 함수 (보존됨)
+```
+
+---
+
+## 15.7 불변성 (Immutability)
+
+> 🧊 **비유**: 불변 데이터는 **얼음**
+> - 한번 만들어지면 변경 불가
+> - 새로운 것을 만들어야 함
+
+```python
+# ❌ 가변 (Mutable) - 위험
+def add_item_bad(item, items=[]):
+    """기본값이 가변 객체 - 버그!"""
+    items.append(item)
+    return items
+
+print(add_item_bad(1))  # [1]
+print(add_item_bad(2))  # [1, 2] - 예상: [2]
+
+# ✅ 불변 (Immutable) - 안전
+def add_item_good(item, items=None):
+    """매번 새 리스트 반환"""
+    if items is None:
+        items = []
+    return items + [item]  # 새 리스트
+
+print(add_item_good(1))  # [1]
+print(add_item_good(2))  # [2]
+
+# ✅ 명시적 복사
+def add_item_copy(item, items=None):
+    if items is None:
+        items = []
+    new_items = items.copy()  # 복사
+    new_items.append(item)
+    return new_items
+```
+
+---
+
+### 불변 데이터 구조 사용
+
+```python
+# 튜플 (불변)
+coords = (10, 20)
+# coords[0] = 15  # TypeError!
+
+# frozenset (불변 집합)
+immutable_set = frozenset([1, 2, 3])
+# immutable_set.add(4)  # AttributeError!
+
+# namedtuple (불변 객체)
+from collections import namedtuple
+
+Point = namedtuple('Point', ['x', 'y'])
+p = Point(10, 20)
+print(p.x, p.y)  # 10 20
+# p.x = 15  # AttributeError!
+
+# 새 객체 생성
+p2 = Point(15, p.y)
+print(p2)  # Point(x=15, y=20)
+```
+
+---
+
+## 15.8 실전 예제
+
+### 예제 1: 데이터 파이프라인
+
+```python
+from functools import reduce
+
+# 함수형 스타일 데이터 처리
+users = [
+    {"name": "Alice", "age": 25, "score": 85},
+    {"name": "Bob", "age": 30, "score": 92},
+    {"name": "Charlie", "age": 22, "score": 78},
+    {"name": "David", "age": 28, "score": 88},
+    {"name": "Eve", "age": 26, "score": 95}
+]
+
+# 파이프라인: 필터링 → 변환 → 정렬
+result = sorted(
+    map(
+        lambda u: {"name": u["name"], "grade": "A" if u["score"] >= 90 else "B"},
+        filter(lambda u: u["age"] < 30, users)
+    ),
+    key=lambda u: u["grade"]
+)
+
+for user in result:
+    print(user)
+
+# 출력:
+# {'name': 'Alice', 'grade': 'B'}
+# {'name': 'Charlie', 'grade': 'B'}
+# {'name': 'David', 'grade': 'B'}
+# {'name': 'Eve', 'grade': 'A'}
+
+# vs 리스트 컴프리헨션 (더 Pythonic)
+result = sorted(
+    [
+        {"name": u["name"], "grade": "A" if u["score"] >= 90 else "B"}
+        for u in users
+        if u["age"] < 30
+    ],
+    key=lambda u: u["grade"]
+)
+```
+
+---
+
+### 예제 2: 함수 합성 (Composition)
+
+```python
+def compose(*functions):
+    """함수들을 합성"""
+    def inner(arg):
+        result = arg
+        for func in reversed(functions):
+            result = func(result)
+        return result
+    return inner
+
+# 개별 함수들
+def add_10(x):
+    return x + 10
+
+def multiply_2(x):
+    return x * 2
+
+def square(x):
+    return x ** 2
+
+# 합성
+pipeline = compose(square, multiply_2, add_10)
+
+print(pipeline(5))  # ((5 + 10) * 2) ** 2 = 900
+
+# 단계별:
+# 5 + 10 = 15
+# 15 * 2 = 30
+# 30 ** 2 = 900
+```
+
+---
+
+### 예제 3: 커링 (Currying)
+
+```python
+def curry(func):
+    """함수를 커링"""
+    def curried(*args):
+        if len(args) >= func.__code__.co_argcount:
+            return func(*args)
+        else:
+            return lambda *more_args: curried(*(args + more_args))
+    return curried
+
+@curry
+def add_three(a, b, c):
+    return a + b + c
+
+# 다양한 호출 방식
+print(add_three(1, 2, 3))      # 6
+print(add_three(1)(2)(3))      # 6
+print(add_three(1, 2)(3))      # 6
+
+# 부분 적용
+add_10 = add_three(10)
+add_10_20 = add_10(20)
+print(add_10_20(5))  # 35
+```
+
+---
+
+### 예제 4: 유효성 검사 파이프라인
+
+```python
+from functools import reduce
+
+def validate_required(field_name):
+    """필수 필드 검증"""
+    def validator(data):
+        if field_name not in data or not data[field_name]:
+            raise ValueError(f"{field_name}은 필수입니다")
+        return data
+    return validator
+
+def validate_type(field_name, expected_type):
+    """타입 검증"""
+    def validator(data):
+        if not isinstance(data.get(field_name), expected_type):
+            raise TypeError(f"{field_name}은 {expected_type.__name__} 타입이어야 합니다")
+        return data
+    return validator
+
+def validate_range(field_name, min_val, max_val):
+    """범위 검증"""
+    def validator(data):
+        value = data.get(field_name)
+        if value < min_val or value > max_val:
+            raise ValueError(f"{field_name}은 {min_val}~{max_val} 사이여야 합니다")
+        return data
+    return validator
+
+def compose_validators(*validators):
+    """검증 함수들을 합성"""
+    def validate(data):
+        return reduce(lambda d, validator: validator(d), validators, data)
+    return validate
+
+# 사용
+user_validator = compose_validators(
+    validate_required("name"),
+    validate_required("age"),
+    validate_type("name", str),
+    validate_type("age", int),
+    validate_range("age", 0, 150)
+)
+
+# 성공
+try:
+    valid_user = user_validator({"name": "Alice", "age": 25})
+    print(f"✅ 검증 성공: {valid_user}")
+except (ValueError, TypeError) as e:
+    print(f"❌ 검증 실패: {e}")
+
+# 실패
+try:
+    user_validator({"name": "Bob", "age": 200})
+except ValueError as e:
+    print(f"❌ {e}")  # age은 0~150 사이여야 합니다
+```
+
+---
+
+### 예제 5: 메모이제이션 데코레이터
+
+```python
+def memoize(func):
+    """범용 메모이제이션 데코레이터"""
+    cache = {}
+
+    def wrapper(*args):
+        if args not in cache:
+            print(f"계산 중: {args}")
+            cache[args] = func(*args)
+        else:
+            print(f"캐시에서: {args}")
+        return cache[args]
+
+    wrapper.cache = cache
+    wrapper.cache_clear = lambda: cache.clear()
+    return wrapper
+
+@memoize
+def expensive_operation(n):
+    """비용이 큰 연산"""
+    import time
+    time.sleep(0.1)
+    return n ** 2
+
+# 첫 호출 (계산)
+print(expensive_operation(10))  # 계산 중: (10,) → 100
+
+# 두 번째 호출 (캐시)
+print(expensive_operation(10))  # 캐시에서: (10,) → 100
+
+# 캐시 확인
+print(expensive_operation.cache)  # {(10,): 100}
+
+# 캐시 초기화
+expensive_operation.cache_clear()
+```
+
+---
+
+## 15.9 리스트 컴프리헨션 vs map/filter
+
+```python
+numbers = range(10)
+
+# map
+squared_map = list(map(lambda x: x ** 2, numbers))
+
+# 리스트 컴프리헨션 (더 Pythonic)
+squared_comp = [x ** 2 for x in numbers]
+
+# filter
+evens_filter = list(filter(lambda x: x % 2 == 0, numbers))
+
+# 리스트 컴프리헨션
+evens_comp = [x for x in numbers if x % 2 == 0]
+
+# map + filter
+result_functional = list(map(lambda x: x ** 2, filter(lambda x: x % 2 == 0, numbers)))
+
+# 리스트 컴프리헨션 (가독성 좋음)
+result_comp = [x ** 2 for x in numbers if x % 2 == 0]
+```
+
+> 💡 **Python 스타일**: 대부분의 경우 **리스트 컴프리헨션**이 더 Pythonic!
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 순수 함수 우선
+
+```python
+# ❌ 부작용 있음
+class Calculator:
+    def __init__(self):
+        self.result = 0
+
+    def add(self, value):
+        self.result += value
+        return self.result
+
+# ✅ 순수 함수
+def add(a, b):
+    return a + b
+```
+
+---
+
+### 💡 Tip 2: 불변 데이터 구조
+
+```python
+# ❌ 원본 수정
+def process_bad(items):
+    items.append(999)
+    return items
+
+# ✅ 새 리스트 반환
+def process_good(items):
+    return items + [999]
+```
+
+---
+
+### 💡 Tip 3: 람다는 간단하게
+
+```python
+# ❌ 복잡한 람다
+result = map(lambda x: x ** 2 if x > 0 else -x ** 2 if x < 0 else 0, numbers)
+
+# ✅ 함수 정의
+def process(x):
+    if x > 0:
+        return x ** 2
+    elif x < 0:
+        return -x ** 2
+    return 0
+
+result = map(process, numbers)
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 함수 합성
+
+두 함수를 합성하는 `compose` 함수 작성
+
+<details>
+<summary>정답 보기</summary>
+
+```python
+def compose(f, g):
+    """f(g(x)) 형태로 합성"""
+    return lambda x: f(g(x))
+
+# 테스트
+add_10 = lambda x: x + 10
+multiply_2 = lambda x: x * 2
+
+pipeline = compose(multiply_2, add_10)
+print(pipeline(5))  # (5 + 10) * 2 = 30
+```
+</details>
+
+---
+
+### 문제 2: 필터링 + 변환
+
+리스트에서 짝수만 골라 제곱하는 함수
+
+<details>
+<summary>정답 보기</summary>
+
+```python
+def square_evens(numbers):
+    """짝수만 제곱"""
+    return [x ** 2 for x in numbers if x % 2 == 0]
+
+# 또는 함수형 스타일
+def square_evens_functional(numbers):
+    return list(map(lambda x: x ** 2, filter(lambda x: x % 2 == 0, numbers)))
+
+# 테스트
+numbers = [1, 2, 3, 4, 5, 6]
+print(square_evens(numbers))  # [4, 16, 36]
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **순수 함수**
+   - 같은 입력 → 같은 출력
+   - 부작용 없음
+
+2. **고차 함수**
+   - `map()`: 변환
+   - `filter()`: 필터링
+   - `reduce()`: 누적
+
+3. **람다**
+   ```python
+   lambda x: x ** 2
+   ```
+
+4. **functools**
+   - `partial()`: 부분 적용
+   - `lru_cache()`: 캐싱
+
+5. **불변성**
+   - 원본 수정 금지
+   - 새 객체 반환
+
+6. **Python 스타일**
+   - 리스트 컴프리헨션 선호
+
+---
+
+## 다음 챕터 예고
+
+Chapter 16에서는 **클로저와 데코레이터 고급**을 다룹니다:
+- 클로저 (Closure)
+- 데코레이터 팩토리
+- 클래스 데코레이터
+- 메타클래스
+
+---
+
+[다음: Chapter 16. 클로저와 스코프 →](chapter16-closures.md)

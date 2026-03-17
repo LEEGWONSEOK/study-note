@@ -1,0 +1,738 @@
+# Chapter 28. 배포와 운영
+
+## 28.1 Jar 빌드
+
+### Gradle 빌드
+
+```bash
+# 빌드
+./gradlew build
+
+# 테스트 스킵
+./gradlew build -x test
+
+# Clean + Build
+./gradlew clean build
+```
+
+**생성 위치**: `build/libs/app-0.0.1-SNAPSHOT.jar`
+
+---
+
+### 실행
+
+```bash
+java -jar build/libs/app-0.0.1-SNAPSHOT.jar
+```
+
+---
+
+### 프로파일 지정
+
+```bash
+java -jar app.jar --spring.profiles.active=prod
+```
+
+---
+
+## 28.2 환경별 설정
+
+### application.yml 분리
+
+**application.yml** (공통):
+```yaml
+spring:
+  application:
+    name: demo-app
+  jpa:
+    open-in-view: false
+```
+
+**application-dev.yml** (개발):
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+
+logging:
+  level:
+    root: DEBUG
+    com.example.demo: TRACE
+```
+
+**application-prod.yml** (운영):
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/myapp
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+logging:
+  level:
+    root: WARN
+    com.example.demo: INFO
+```
+
+---
+
+## 28.3 Docker 배포
+
+### Dockerfile
+
+```dockerfile
+# Multi-stage build
+FROM gradle:8.5-jdk17 AS build
+WORKDIR /app
+COPY . .
+RUN gradle build -x test --no-daemon
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/build/libs/*.jar app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+---
+
+### .dockerignore
+
+```
+.git
+.gradle
+build
+*.md
+.idea
+.vscode
+```
+
+---
+
+### 빌드 & 실행
+
+```bash
+# 이미지 빌드
+docker build -t my-kotlin-app:latest .
+
+# 컨테이너 실행
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_USERNAME=myuser \
+  -e DB_PASSWORD=mypass \
+  my-kotlin-app:latest
+```
+
+---
+
+## 28.4 Docker Compose
+
+### docker-compose.yml
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/myapp
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  grafana_data:
+```
+
+---
+
+### 실행
+
+```bash
+# 시작
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f app
+
+# 중지
+docker-compose down
+
+# 중지 + 볼륨 삭제
+docker-compose down -v
+```
+
+---
+
+## 28.5 Kubernetes 배포
+
+### Deployment
+
+**deployment.yaml**:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kotlin-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kotlin-app
+  template:
+    metadata:
+      labels:
+        app: kotlin-app
+    spec:
+      containers:
+      - name: kotlin-app
+        image: my-kotlin-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-secret
+              key: password
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+```
+
+---
+
+### Service
+
+**service.yaml**:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: kotlin-app-service
+spec:
+  selector:
+    app: kotlin-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+```
+
+---
+
+### ConfigMap & Secret
+
+**configmap.yaml**:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  application.yml: |
+    spring:
+      application:
+        name: demo-app
+```
+
+**secret.yaml**:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+type: Opaque
+data:
+  username: cG9zdGdyZXM=  # base64: postgres
+  password: cG9zdGdyZXM=  # base64: postgres
+```
+
+---
+
+### 배포
+
+```bash
+# 적용
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+
+# 확인
+kubectl get pods
+kubectl get services
+
+# 로그
+kubectl logs -f <pod-name>
+
+# 스케일링
+kubectl scale deployment kotlin-app --replicas=5
+```
+
+---
+
+## 28.6 CI/CD (GitHub Actions)
+
+### .github/workflows/deploy.yml
+
+```yaml
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+    - name: Run tests
+      run: ./gradlew test
+
+    - name: Build Docker image
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/kotlin-app:latest .
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push Docker image
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/kotlin-app:latest
+
+    - name: Deploy to Kubernetes
+      uses: azure/k8s-deploy@v4
+      with:
+        manifests: |
+          k8s/deployment.yaml
+          k8s/service.yaml
+        images: |
+          ${{ secrets.DOCKER_USERNAME }}/kotlin-app:latest
+```
+
+---
+
+## 28.7 헬스 체크
+
+### Actuator Health Endpoints
+
+**application.yml**:
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+```
+
+**Endpoints**:
+- `/actuator/health/liveness`: Liveness probe
+- `/actuator/health/readiness`: Readiness probe
+
+---
+
+### Kubernetes Probes
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 3
+```
+
+---
+
+## 28.8 Graceful Shutdown
+
+### application.yml
+
+```yaml
+server:
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+```
+
+**동작**:
+1. 새 요청 거부
+2. 진행 중인 요청 완료 대기 (최대 30초)
+3. 종료
+
+---
+
+### 코드로 처리
+
+```kotlin
+import org.springframework.context.event.ContextClosedEvent
+import org.springframework.context.event.EventListener
+import org.springframework.stereotype.Component
+import mu.KotlinLogging
+
+private val log = KotlinLogging.logger {}
+
+@Component
+class ShutdownListener {
+
+    @EventListener(ContextClosedEvent::class)
+    fun onShutdown() {
+        log.info { "Application is shutting down..." }
+        // 정리 작업
+    }
+}
+```
+
+---
+
+## 28.9 성능 최적화
+
+### JVM Options
+
+```bash
+java -jar app.jar \
+  -Xms512m \
+  -Xmx1g \
+  -XX:+UseG1GC \
+  -XX:MaxGCPauseMillis=200 \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  -XX:HeapDumpPath=/logs/heapdump.hprof
+```
+
+---
+
+### Dockerfile 최적화
+
+```dockerfile
+# ✅ 레이어 캐싱 활용
+FROM gradle:8.5-jdk17 AS build
+WORKDIR /app
+
+# 의존성만 먼저 다운로드 (캐싱)
+COPY build.gradle.kts settings.gradle.kts ./
+RUN gradle dependencies --no-daemon
+
+# 소스 복사 및 빌드
+COPY . .
+RUN gradle build -x test --no-daemon
+
+# 실행 이미지
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# 비root 사용자
+RUN addgroup -g 1001 -S appuser && adduser -u 1001 -S appuser -G appuser
+USER appuser
+
+COPY --from=build /app/build/libs/*.jar app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+---
+
+## 28.10 모니터링 & 알림
+
+### Prometheus Alerts
+
+**prometheus-rules.yml**:
+```yaml
+groups:
+- name: app_alerts
+  rules:
+  - alert: HighErrorRate
+    expr: rate(http_server_requests_seconds_count{status="500"}[5m]) > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High error rate detected"
+      description: "Error rate is {{ $value }} errors/sec"
+
+  - alert: HighMemoryUsage
+    expr: process_resident_memory_bytes / 1024 / 1024 > 800
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage is {{ $value }}MB"
+```
+
+---
+
+## 28.11 로그 관리
+
+### ELK Stack
+
+**docker-compose.yml**:
+```yaml
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+```
+
+---
+
+## 28.12 백업 전략
+
+### Database Backup (PostgreSQL)
+
+```bash
+# 백업
+docker exec postgres pg_dump -U postgres myapp > backup.sql
+
+# 복원
+docker exec -i postgres psql -U postgres myapp < backup.sql
+
+# Cron으로 자동화
+0 2 * * * /path/to/backup.sh
+```
+
+**backup.sh**:
+```bash
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+docker exec postgres pg_dump -U postgres myapp > /backups/myapp_$DATE.sql
+# S3 업로드 등
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 환경변수 우선순위
+
+1. 시스템 환경변수
+2. `application-{profile}.yml`
+3. `application.yml`
+
+```bash
+# 환경변수로 오버라이드
+export SPRING_DATASOURCE_URL=jdbc:postgresql://prod-db:5432/myapp
+java -jar app.jar
+```
+
+---
+
+### 💡 Tip 2: 프로파일 조합
+
+```bash
+# 여러 프로파일 동시 사용
+java -jar app.jar --spring.profiles.active=prod,monitoring
+```
+
+**application-monitoring.yml**:
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+```
+
+---
+
+### 💡 Tip 3: Zero-Downtime Deployment
+
+```yaml
+# Kubernetes RollingUpdate
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+```
+
+1. 새 Pod 생성
+2. Readiness probe 통과 대기
+3. 트래픽 라우팅
+4. 기존 Pod 종료
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **프로파일 분리**
+   - dev, prod 환경 분리
+   - 환경변수 활용
+
+2. **Docker**
+   - Multi-stage build
+   - 레이어 캐싱
+
+3. **Kubernetes**
+   - Deployment, Service
+   - Liveness/Readiness probes
+
+4. **모니터링**
+   - Actuator + Prometheus
+   - Grafana 대시보드
+
+5. **CI/CD**
+   - GitHub Actions
+   - 자동 배포
+
+---
+
+## Part 9 완료!
+
+Part 9: 실전 활용을 모두 마쳤습니다!
+
+**배운 내용**:
+- ✅ Chapter 25: 테스팅 (JUnit 5, MockK)
+- ✅ Chapter 26: 로깅과 모니터링
+- ✅ Chapter 27: 보안 (Spring Security)
+- ✅ Chapter 28: 배포와 운영
+
+---
+
+## 다음 Part 예고
+
+**Part 10: 부록**에서 다룰 내용:
+- Kotlin DSL
+- Gradle Kotlin DSL
+- 유용한 라이브러리
+- 커뮤니티 리소스
+
+---
+
+[← 이전](chapter27-security.md) | [다음: 부록 →](../part10-appendix/appendix-a-kotlin-dsl.md)
