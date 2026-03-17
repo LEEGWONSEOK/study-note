@@ -1,0 +1,1265 @@
+# Chapter 7. 모듈과 패키지 (Modules & Packages)
+
+## 7.1 모듈이란?
+
+> 📚 **비유**: 모듈은 **도구 상자**입니다.
+> - 함수: 개별 도구 (망치, 드라이버)
+> - 모듈: 도구 상자 (관련 도구들의 모음)
+> - 패키지: 도구 캐비닛 (여러 도구 상자의 모음)
+
+**모듈 (Module)**: `.py` 파일 하나 = 재사용 가능한 코드의 묶음
+
+---
+
+### Java vs Python 비교
+
+**Java**:
+```java
+// Calculator.java (클래스 = 파일)
+public class Calculator {
+    public static int add(int a, int b) {
+        return a + b;
+    }
+}
+
+// Main.java
+import Calculator;  // 클래스 import
+```
+
+**Python**:
+```python
+# calculator.py (모듈)
+def add(a, b):
+    return a + b
+
+# main.py
+import calculator  # 모듈 import
+```
+
+> 💡 **차이점**:
+> - Java: 1 파일 = 1 클래스 (원칙적으로)
+> - Python: 1 파일 = 여러 함수/클래스 가능
+
+---
+
+## 7.2 모듈 만들기
+
+### 예제: 계산기 모듈
+
+**calculator.py**:
+```python
+"""
+간단한 계산기 모듈
+
+Functions:
+    add(a, b): 덧셈
+    subtract(a, b): 뺄셈
+    multiply(a, b): 곱셈
+    divide(a, b): 나눗셈
+"""
+
+def add(a, b):
+    """두 수를 더합니다."""
+    return a + b
+
+def subtract(a, b):
+    """두 수를 뺍니다."""
+    return a - b
+
+def multiply(a, b):
+    """두 수를 곱합니다."""
+    return a * b
+
+def divide(a, b):
+    """두 수를 나눕니다."""
+    if b == 0:
+        raise ValueError("0으로 나눌 수 없습니다")
+    return a / b
+
+# 모듈 레벨 변수
+PI = 3.14159
+VERSION = "1.0.0"
+```
+
+---
+
+## 7.3 모듈 import하기
+
+### 1. 전체 모듈 import
+
+```python
+import calculator
+
+# 사용 시 모듈명.함수명
+result = calculator.add(10, 5)
+print(result)  # 15
+
+print(calculator.PI)  # 3.14159
+```
+
+> 🏷️ **비유**: **패키지 전체** 가져오기
+> - 도구 상자를 통째로 가져옴
+> - 사용할 때 상자 이름 명시
+
+---
+
+### 2. 특정 함수만 import
+
+```python
+from calculator import add, subtract
+
+# 모듈명 없이 바로 사용
+result = add(10, 5)
+print(result)  # 15
+
+# multiply는 import 안 해서 사용 불가
+# multiply(2, 3)  # NameError!
+```
+
+> 🔧 **비유**: **필요한 도구만** 꺼내기
+> - 망치와 드라이버만 꺼냄
+> - 사용할 때 도구만 쓰면 됨
+
+---
+
+### 3. 모든 것 import (비추천)
+
+```python
+from calculator import *
+
+# 모든 함수 사용 가능
+result = add(10, 5)
+print(PI)
+```
+
+> ⚠️ **주의**: 이름 충돌 위험!
+
+```python
+# 내 코드
+def add(a, b):
+    return a + b + 100
+
+# 외부 모듈
+from calculator import *  # add 함수가 덮어씌워짐!
+
+result = add(10, 5)  # 어떤 add가 실행될까?
+```
+
+---
+
+### 4. 별칭 (Alias) 사용
+
+```python
+import calculator as calc
+
+result = calc.add(10, 5)
+print(result)  # 15
+```
+
+```python
+from calculator import add as addition
+
+result = addition(10, 5)
+print(result)  # 15
+```
+
+> 🏷️ **비유**: **별명 붙이기**
+> - 긴 이름을 짧게
+> - 이름 충돌 방지
+
+---
+
+## 7.4 모듈 검색 경로
+
+> 🗺️ **비유**: Python은 **지도**를 보고 모듈을 찾습니다.
+
+**검색 순서**:
+1. 현재 디렉토리
+2. PYTHONPATH 환경 변수
+3. 표준 라이브러리 경로
+4. site-packages (pip 설치 패키지)
+
+```python
+import sys
+
+# 모듈 검색 경로 확인
+for path in sys.path:
+    print(path)
+```
+
+---
+
+### 같은 디렉토리의 모듈
+
+```
+project/
+├── main.py
+└── calculator.py
+```
+
+**main.py**:
+```python
+import calculator  # 같은 디렉토리에서 찾음
+
+result = calculator.add(10, 5)
+print(result)
+```
+
+---
+
+### 하위 디렉토리의 모듈
+
+```
+project/
+├── main.py
+└── utils/
+    └── calculator.py
+```
+
+**main.py**:
+```python
+from utils import calculator
+
+result = calculator.add(10, 5)
+print(result)
+```
+
+---
+
+## 7.5 패키지 (Package)
+
+> 📦 **비유**: 패키지는 **폴더 구조**입니다.
+> - 모듈: 파일 (book.txt)
+> - 패키지: 폴더 (documents/)
+
+**패키지**: 모듈들을 담은 디렉토리 (`__init__.py` 포함)
+
+---
+
+### 패키지 구조
+
+```
+mypackage/
+├── __init__.py        # 패키지 초기화 파일
+├── module1.py
+├── module2.py
+└── subpackage/
+    ├── __init__.py
+    └── module3.py
+```
+
+---
+
+### `__init__.py`의 역할
+
+> 🚪 **비유**: **현관문**
+> - 패키지 진입 시 실행
+> - 패키지 초기화
+> - 공개할 모듈 지정
+
+**mypackage/__init__.py**:
+```python
+"""
+내 패키지
+
+Modules:
+    module1: 기능 1
+    module2: 기능 2
+"""
+
+# 패키지 초기화 코드
+print("mypackage 로딩 중...")
+
+# 버전 정보
+__version__ = "1.0.0"
+__author__ = "Your Name"
+
+# 공개할 모듈 지정
+__all__ = ["module1", "module2"]
+```
+
+---
+
+### 실전 예제: math_utils 패키지
+
+```
+math_utils/
+├── __init__.py
+├── basic.py          # 기본 연산
+├── advanced.py       # 고급 연산
+└── constants.py      # 상수
+```
+
+---
+
+**math_utils/constants.py**:
+```python
+"""수학 상수들"""
+
+PI = 3.14159265359
+E = 2.71828182846
+GOLDEN_RATIO = 1.61803398875
+```
+
+---
+
+**math_utils/basic.py**:
+```python
+"""기본 수학 연산"""
+
+def add(a, b):
+    """덧셈"""
+    return a + b
+
+def subtract(a, b):
+    """뺄셈"""
+    return a - b
+
+def multiply(a, b):
+    """곱셈"""
+    return a * b
+
+def divide(a, b):
+    """나눗셈"""
+    if b == 0:
+        raise ValueError("0으로 나눌 수 없습니다")
+    return a / b
+```
+
+---
+
+**math_utils/advanced.py**:
+```python
+"""고급 수학 연산"""
+
+from .constants import PI
+
+def circle_area(radius):
+    """원의 넓이"""
+    return PI * radius ** 2
+
+def circle_circumference(radius):
+    """원의 둘레"""
+    return 2 * PI * radius
+
+def factorial(n):
+    """팩토리얼"""
+    if n < 0:
+        raise ValueError("음수는 불가능")
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+```
+
+---
+
+**math_utils/__init__.py**:
+```python
+"""
+수학 유틸리티 패키지
+
+Modules:
+    basic: 기본 연산 (덧셈, 뺄셈, 곱셈, 나눗셈)
+    advanced: 고급 연산 (원 넓이, 팩토리얼 등)
+    constants: 수학 상수 (PI, E 등)
+"""
+
+__version__ = "1.0.0"
+
+# 자주 사용하는 것들을 패키지 레벨에서 바로 접근 가능하게
+from .basic import add, subtract, multiply, divide
+from .constants import PI, E
+from .advanced import circle_area, factorial
+
+# 공개 API 정의
+__all__ = [
+    "add", "subtract", "multiply", "divide",
+    "PI", "E",
+    "circle_area", "factorial"
+]
+```
+
+---
+
+### 패키지 사용하기
+
+**방법 1: 패키지 전체 import**
+```python
+import math_utils
+
+# __init__.py에서 노출한 함수들
+result = math_utils.add(10, 5)
+print(result)  # 15
+
+area = math_utils.circle_area(10)
+print(area)  # 314.159...
+
+print(math_utils.PI)  # 3.14159...
+```
+
+---
+
+**방법 2: 특정 모듈 import**
+```python
+from math_utils import basic, advanced
+
+result = basic.add(10, 5)
+area = advanced.circle_area(10)
+```
+
+---
+
+**방법 3: 특정 함수만 import**
+```python
+from math_utils import add, circle_area, PI
+
+result = add(10, 5)
+area = circle_area(10)
+print(PI)
+```
+
+---
+
+**방법 4: 서브모듈 직접 import**
+```python
+from math_utils.advanced import factorial
+
+result = factorial(5)
+print(result)  # 120
+```
+
+---
+
+## 7.6 상대 import vs 절대 import
+
+### 절대 import (권장)
+
+```python
+# math_utils/advanced.py
+from math_utils.constants import PI  # 패키지 루트부터
+```
+
+---
+
+### 상대 import
+
+```python
+# math_utils/advanced.py
+from .constants import PI        # 같은 디렉토리
+from ..otherpackage import foo   # 상위 디렉토리
+```
+
+> 🗺️ **비유**: 경로 표현법
+> - 절대 경로: `/Users/alice/documents/file.txt` (절대 import)
+> - 상대 경로: `./file.txt`, `../file.txt` (상대 import)
+
+---
+
+### 언제 뭘 쓸까?
+
+**절대 import 사용**:
+- 명확하고 읽기 쉬움
+- 파일 이동해도 안전
+- 대부분의 경우 권장
+
+**상대 import 사용**:
+- 패키지 내부 모듈끼리
+- 패키지 이름 변경 시 유리
+
+---
+
+## 7.7 표준 라이브러리
+
+> 🎁 **비유**: Python은 **선물 세트**입니다.
+> - 설치 없이 바로 사용 가능한 모듈들
+
+### 자주 사용하는 표준 라이브러리
+
+#### 1. os - 운영체제 기능
+
+```python
+import os
+
+# 현재 디렉토리
+print(os.getcwd())  # /Users/alice/project
+
+# 디렉토리 목록
+files = os.listdir(".")
+print(files)
+
+# 경로 조인
+path = os.path.join("folder", "file.txt")
+print(path)  # folder/file.txt
+
+# 파일 존재 여부
+exists = os.path.exists("file.txt")
+print(exists)
+
+# 디렉토리 생성
+os.makedirs("new_folder/subfolder", exist_ok=True)
+```
+
+---
+
+#### 2. sys - 시스템 관련
+
+```python
+import sys
+
+# Python 버전
+print(sys.version)
+
+# 명령행 인수
+print(sys.argv)
+
+# 모듈 검색 경로
+print(sys.path)
+
+# 프로그램 종료
+# sys.exit(0)
+```
+
+---
+
+#### 3. datetime - 날짜와 시간
+
+```python
+from datetime import datetime, date, timedelta
+
+# 현재 시간
+now = datetime.now()
+print(now)  # 2024-01-15 14:30:00.123456
+
+# 날짜 생성
+birthday = date(1990, 5, 15)
+print(birthday)  # 1990-05-15
+
+# 날짜 연산
+tomorrow = date.today() + timedelta(days=1)
+print(tomorrow)
+
+# 포매팅
+formatted = now.strftime("%Y년 %m월 %d일 %H:%M:%S")
+print(formatted)  # 2024년 01월 15일 14:30:00
+```
+
+---
+
+#### 4. random - 난수 생성
+
+```python
+import random
+
+# 0.0 ~ 1.0 실수
+print(random.random())  # 0.7234...
+
+# 정수 범위
+dice = random.randint(1, 6)  # 1~6
+print(dice)
+
+# 리스트에서 선택
+fruits = ["apple", "banana", "cherry"]
+choice = random.choice(fruits)
+print(choice)
+
+# 리스트 섞기
+random.shuffle(fruits)
+print(fruits)
+
+# 여러 개 선택
+sample = random.sample(fruits, 2)
+print(sample)
+```
+
+---
+
+#### 5. json - JSON 처리
+
+```python
+import json
+
+# 딕셔너리 → JSON 문자열
+data = {"name": "Alice", "age": 25, "city": "Seoul"}
+json_str = json.dumps(data, ensure_ascii=False, indent=2)
+print(json_str)
+# {
+#   "name": "Alice",
+#   "age": 25,
+#   "city": "Seoul"
+# }
+
+# JSON 문자열 → 딕셔너리
+parsed = json.loads(json_str)
+print(parsed["name"])  # Alice
+
+# 파일에 쓰기
+with open("data.json", "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+# 파일에서 읽기
+with open("data.json", "r", encoding="utf-8") as f:
+    loaded = json.load(f)
+    print(loaded)
+```
+
+---
+
+#### 6. re - 정규표현식
+
+```python
+import re
+
+# 패턴 매칭
+text = "내 이메일은 alice@example.com입니다"
+pattern = r"\w+@\w+\.\w+"
+match = re.search(pattern, text)
+if match:
+    print(match.group())  # alice@example.com
+
+# 모든 매칭 찾기
+text = "전화번호: 010-1234-5678, 02-987-6543"
+pattern = r"\d{2,3}-\d{3,4}-\d{4}"
+phones = re.findall(pattern, text)
+print(phones)  # ['010-1234-5678', '02-987-6543']
+
+# 치환
+text = "Hello World Hello Python"
+result = re.sub(r"Hello", "Hi", text)
+print(result)  # Hi World Hi Python
+```
+
+---
+
+#### 7. collections - 특수 컨테이너
+
+```python
+from collections import Counter, defaultdict, namedtuple
+
+# Counter: 빈도수 계산
+words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+counter = Counter(words)
+print(counter)  # Counter({'apple': 3, 'banana': 2, 'cherry': 1})
+print(counter.most_common(2))  # [('apple', 3), ('banana', 2)]
+
+# defaultdict: 기본값이 있는 딕셔너리
+scores = defaultdict(int)  # 기본값 0
+scores["Alice"] += 10
+scores["Bob"] += 20
+print(scores)  # defaultdict(<class 'int'>, {'Alice': 10, 'Bob': 20})
+
+# namedtuple: 이름이 있는 튜플
+Point = namedtuple("Point", ["x", "y"])
+p = Point(10, 20)
+print(p.x, p.y)  # 10 20
+```
+
+---
+
+#### 8. pathlib - 경로 처리 (모던 방식)
+
+```python
+from pathlib import Path
+
+# 경로 객체 생성
+path = Path("folder/subfolder/file.txt")
+
+# 경로 조작
+print(path.parent)      # folder/subfolder
+print(path.name)        # file.txt
+print(path.stem)        # file
+print(path.suffix)      # .txt
+
+# 경로 조인
+path = Path("folder") / "subfolder" / "file.txt"
+
+# 존재 여부
+if path.exists():
+    print("파일 존재")
+
+# 디렉토리 생성
+Path("new_folder").mkdir(parents=True, exist_ok=True)
+
+# 파일 읽기/쓰기
+Path("test.txt").write_text("Hello, World!")
+content = Path("test.txt").read_text()
+print(content)
+
+# 디렉토리 순회
+for file in Path(".").glob("*.py"):
+    print(file)
+```
+
+---
+
+## 7.8 외부 라이브러리 (pip)
+
+> 🛒 **비유**: pip는 **앱 스토어**입니다.
+> - PyPI: 앱 스토어 (Python Package Index)
+> - pip: 앱 설치 도구
+
+### 패키지 설치
+
+```bash
+# 설치
+pip install requests
+
+# 특정 버전
+pip install requests==2.28.0
+
+# 최신 버전으로 업그레이드
+pip install --upgrade requests
+
+# 삭제
+pip uninstall requests
+
+# 설치된 패키지 목록
+pip list
+
+# 패키지 정보
+pip show requests
+```
+
+---
+
+### requirements.txt
+
+> 📋 **비유**: **쇼핑 목록**
+> - 프로젝트에 필요한 패키지 목록
+
+**requirements.txt**:
+```
+Django==4.2.0
+requests>=2.28.0
+pytest==7.4.0
+black
+```
+
+**설치**:
+```bash
+pip install -r requirements.txt
+```
+
+**생성**:
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+### 인기 외부 라이브러리
+
+#### 1. requests - HTTP 클라이언트
+
+```python
+import requests
+
+# GET 요청
+response = requests.get("https://api.github.com/users/python")
+print(response.status_code)  # 200
+data = response.json()
+print(data["name"])
+
+# POST 요청
+data = {"username": "alice", "password": "secret"}
+response = requests.post("https://api.example.com/login", json=data)
+```
+
+---
+
+#### 2. pandas - 데이터 분석
+
+```python
+import pandas as pd
+
+# CSV 읽기
+df = pd.read_csv("data.csv")
+
+# 데이터 확인
+print(df.head())
+print(df.describe())
+
+# 필터링
+adults = df[df["age"] >= 18]
+
+# 그룹별 집계
+avg_by_city = df.groupby("city")["age"].mean()
+```
+
+---
+
+#### 3. numpy - 수치 계산
+
+```python
+import numpy as np
+
+# 배열 생성
+arr = np.array([1, 2, 3, 4, 5])
+
+# 연산
+print(arr * 2)      # [2, 4, 6, 8, 10]
+print(arr.mean())   # 3.0
+
+# 행렬
+matrix = np.array([[1, 2], [3, 4]])
+print(matrix.T)     # 전치
+```
+
+---
+
+## 7.9 모듈 실행 vs Import
+
+### `__name__` 변수
+
+> 🎭 **비유**: **신분증**
+> - 직접 실행: `__name__` = `"__main__"` (주인공)
+> - import됨: `__name__` = 모듈명 (조연)
+
+**calculator.py**:
+```python
+def add(a, b):
+    return a + b
+
+# 이 부분은 직접 실행할 때만 실행됨
+if __name__ == "__main__":
+    print("계산기 모듈 테스트")
+    result = add(10, 5)
+    print(f"10 + 5 = {result}")
+```
+
+**실행 방법 1**: 직접 실행
+```bash
+python calculator.py
+# 출력:
+# 계산기 모듈 테스트
+# 10 + 5 = 15
+```
+
+**실행 방법 2**: import
+```python
+import calculator
+
+result = calculator.add(10, 5)
+# __name__이 "calculator"이므로 테스트 코드 실행 안 됨
+```
+
+---
+
+### 활용 예제
+
+**utils.py**:
+```python
+"""유틸리티 함수들"""
+
+def process_data(data):
+    """데이터 처리"""
+    return [x * 2 for x in data]
+
+def validate_email(email):
+    """이메일 검증"""
+    return "@" in email and "." in email
+
+# 테스트 코드 (직접 실행 시에만)
+if __name__ == "__main__":
+    # 단위 테스트
+    assert process_data([1, 2, 3]) == [2, 4, 6]
+    assert validate_email("test@example.com") == True
+    assert validate_email("invalid") == False
+    print("모든 테스트 통과!")
+```
+
+---
+
+## 7.10 실전 예제
+
+### 예제 1: 파일 유틸리티 패키지
+
+```
+file_utils/
+├── __init__.py
+├── reader.py
+├── writer.py
+└── validator.py
+```
+
+**file_utils/reader.py**:
+```python
+"""파일 읽기 유틸리티"""
+
+def read_lines(filepath):
+    """파일을 줄 단위로 읽기"""
+    with open(filepath, "r", encoding="utf-8") as f:
+        return f.readlines()
+
+def read_json(filepath):
+    """JSON 파일 읽기"""
+    import json
+    with open(filepath, "r", encoding="utf-8") as f:
+        return json.load(f)
+```
+
+**file_utils/writer.py**:
+```python
+"""파일 쓰기 유틸리티"""
+
+def write_lines(filepath, lines):
+    """줄 단위로 파일 쓰기"""
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+def write_json(filepath, data):
+    """JSON 파일 쓰기"""
+    import json
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+```
+
+**file_utils/validator.py**:
+```python
+"""파일 검증 유틸리티"""
+
+import os
+
+def is_valid_path(filepath):
+    """경로 유효성 검사"""
+    return os.path.exists(filepath)
+
+def is_writable(filepath):
+    """쓰기 가능 여부"""
+    return os.access(os.path.dirname(filepath), os.W_OK)
+```
+
+**file_utils/__init__.py**:
+```python
+"""파일 유틸리티 패키지"""
+
+__version__ = "1.0.0"
+
+from .reader import read_lines, read_json
+from .writer import write_lines, write_json
+from .validator import is_valid_path, is_writable
+
+__all__ = [
+    "read_lines", "read_json",
+    "write_lines", "write_json",
+    "is_valid_path", "is_writable"
+]
+```
+
+**사용**:
+```python
+from file_utils import read_json, write_json, is_valid_path
+
+# JSON 읽기
+if is_valid_path("data.json"):
+    data = read_json("data.json")
+    print(data)
+
+# JSON 쓰기
+new_data = {"name": "Alice", "age": 25}
+write_json("output.json", new_data)
+```
+
+---
+
+### 예제 2: 설정 관리 모듈
+
+**config.py**:
+```python
+"""애플리케이션 설정 관리"""
+
+import json
+from pathlib import Path
+
+class Config:
+    """설정 클래스"""
+
+    def __init__(self, config_file="config.json"):
+        self.config_file = Path(config_file)
+        self.data = self._load()
+
+    def _load(self):
+        """설정 파일 로드"""
+        if self.config_file.exists():
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return {}
+
+    def get(self, key, default=None):
+        """설정 값 가져오기"""
+        return self.data.get(key, default)
+
+    def set(self, key, value):
+        """설정 값 설정"""
+        self.data[key] = value
+
+    def save(self):
+        """설정 파일 저장"""
+        with open(self.config_file, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
+
+# 싱글톤 인스턴스
+_config = None
+
+def get_config():
+    """전역 설정 인스턴스 가져오기"""
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config
+
+# 테스트
+if __name__ == "__main__":
+    config = get_config()
+
+    # 설정
+    config.set("app_name", "MyApp")
+    config.set("version", "1.0.0")
+    config.set("debug", True)
+
+    # 저장
+    config.save()
+
+    # 읽기
+    print(config.get("app_name"))  # MyApp
+    print(config.get("version"))   # 1.0.0
+    print(config.get("unknown", "default"))  # default
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 순환 import 방지
+
+**❌ 문제 상황**:
+```python
+# module_a.py
+from module_b import func_b
+
+def func_a():
+    return func_b()
+
+# module_b.py
+from module_a import func_a
+
+def func_b():
+    return func_a()  # 순환 참조!
+```
+
+**✅ 해결책**:
+```python
+# 1. 함수 내부에서 import
+def func_a():
+    from module_b import func_b
+    return func_b()
+
+# 2. 구조 개선 (권장)
+# common.py에 공통 함수 분리
+```
+
+---
+
+### 💡 Tip 2: `__all__` 사용
+
+```python
+# mymodule.py
+def public_func():
+    """공개 함수"""
+    pass
+
+def _private_func():
+    """내부 함수 (관례)"""
+    pass
+
+# 공개 API 명시
+__all__ = ["public_func"]
+```
+
+```python
+from mymodule import *
+
+public_func()   # 사용 가능
+_private_func() # NameError (명시하지 않음)
+```
+
+---
+
+### 💡 Tip 3: 네이밍 컨벤션
+
+- **모듈명**: `snake_case` (소문자, 언더스코어)
+  - ✅ `my_module.py`
+  - ❌ `MyModule.py`, `my-module.py`
+
+- **패키지명**: 짧고 소문자
+  - ✅ `mypackage`
+  - ❌ `MyPackage`, `my_package`
+
+- **비공개**: `_`로 시작
+  - `_internal_func()`
+  - `_PrivateClass`
+
+---
+
+## 연습 문제
+
+### 문제 1: string_utils 모듈 만들기
+
+다음 함수들을 가진 모듈 작성:
+- `reverse(s)`: 문자열 뒤집기
+- `capitalize_words(s)`: 각 단어 첫 글자 대문자
+- `count_vowels(s)`: 모음 개수 세기
+
+<details>
+<summary>정답 보기</summary>
+
+**string_utils.py**:
+```python
+"""문자열 유틸리티"""
+
+def reverse(s):
+    """문자열 뒤집기"""
+    return s[::-1]
+
+def capitalize_words(s):
+    """각 단어 첫 글자 대문자"""
+    return " ".join(word.capitalize() for word in s.split())
+
+def count_vowels(s):
+    """모음 개수 세기"""
+    vowels = "aeiouAEIOU"
+    return sum(1 for char in s if char in vowels)
+
+# 테스트
+if __name__ == "__main__":
+    print(reverse("hello"))  # olleh
+    print(capitalize_words("hello world"))  # Hello World
+    print(count_vowels("hello"))  # 2
+```
+</details>
+
+---
+
+### 문제 2: calculator 패키지 만들기
+
+다음 구조의 패키지 작성:
+```
+calculator/
+├── __init__.py
+├── basic.py     # 사칙연산
+└── advanced.py  # 제곱, 제곱근, 팩토리얼
+```
+
+<details>
+<summary>정답 보기</summary>
+
+**calculator/basic.py**:
+```python
+"""기본 연산"""
+
+def add(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+
+def multiply(a, b):
+    return a * b
+
+def divide(a, b):
+    if b == 0:
+        raise ValueError("0으로 나눌 수 없습니다")
+    return a / b
+```
+
+**calculator/advanced.py**:
+```python
+"""고급 연산"""
+
+import math
+
+def power(base, exponent):
+    """거듭제곱"""
+    return base ** exponent
+
+def sqrt(n):
+    """제곱근"""
+    return math.sqrt(n)
+
+def factorial(n):
+    """팩토리얼"""
+    if n < 0:
+        raise ValueError("음수 불가")
+    return math.factorial(n)
+```
+
+**calculator/__init__.py**:
+```python
+"""계산기 패키지"""
+
+from .basic import add, subtract, multiply, divide
+from .advanced import power, sqrt, factorial
+
+__all__ = [
+    "add", "subtract", "multiply", "divide",
+    "power", "sqrt", "factorial"
+]
+```
+
+**사용**:
+```python
+from calculator import add, power, sqrt
+
+print(add(10, 5))    # 15
+print(power(2, 3))   # 8
+print(sqrt(16))      # 4.0
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **모듈**
+   - `.py` 파일 = 모듈
+   - `import module_name`
+
+2. **패키지**
+   - 모듈들을 담은 디렉토리
+   - `__init__.py` 필수 (Python 3.3+ 선택)
+
+3. **import 방식**
+   ```python
+   import module
+   from module import func
+   from package import module
+   from package.module import func
+   ```
+
+4. **`__name__` 패턴**
+   ```python
+   if __name__ == "__main__":
+       # 직접 실행 시에만
+   ```
+
+5. **표준 라이브러리**
+   - os, sys, datetime, random, json, re 등
+
+6. **외부 라이브러리**
+   - pip로 설치
+   - requirements.txt로 관리
+
+---
+
+## 다음 챕터 예고
+
+Chapter 8에서는 **예외 처리**를 다룹니다:
+- try-except-finally
+- 예외 종류
+- 사용자 정의 예외
+- 컨텍스트 매니저
+
+---
+
+[다음: Chapter 8. 예외 처리 →](chapter8-exceptions.md)

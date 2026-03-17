@@ -1,0 +1,1131 @@
+# Chapter 11. 특수 메서드와 고급 OOP (Special Methods & Advanced OOP)
+
+## 11.1 특수 메서드 완전 정복
+
+> ⚙️ **비유**: 특수 메서드는 **자동화 시스템**입니다.
+> - Python이 특정 상황에서 자동 호출
+> - `__메서드명__` 형태
+> - "던더 메서드" (double underscore)
+
+---
+
+## 11.2 객체 생성과 소멸
+
+### `__new__`: 객체 생성 (생성자 이전)
+
+> 🏭 **비유**: `__new__`는 **공장**, `__init__`는 **조립 라인**
+> - `__new__`: 빈 객체 생성
+> - `__init__`: 객체 초기화
+
+```python
+class Singleton:
+    """싱글톤 패턴"""
+
+    _instance = None
+
+    def __new__(cls):
+        print("__new__ 호출")
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        print("__init__ 호출")
+
+# 테스트
+s1 = Singleton()
+# __new__ 호출
+# __init__ 호출
+
+s2 = Singleton()
+# __new__ 호출
+# __init__ 호출
+
+print(s1 is s2)  # True (같은 객체!)
+```
+
+---
+
+### `__del__`: 소멸자
+
+```python
+class FileHandler:
+    def __init__(self, filename):
+        print(f"{filename} 열기")
+        self.filename = filename
+
+    def __del__(self):
+        print(f"{self.filename} 닫기 (소멸)")
+
+# 사용
+handler = FileHandler("data.txt")
+# data.txt 열기
+
+del handler
+# data.txt 닫기 (소멸)
+```
+
+> ⚠️ **주의**: `__del__`은 예측 불가능! 리소스 해제는 컨텍스트 매니저 사용 권장
+
+---
+
+## 11.3 문자열 표현
+
+### `__str__` vs `__repr__` vs `__format__`
+
+```python
+class Money:
+    def __init__(self, amount, currency="KRW"):
+        self.amount = amount
+        self.currency = currency
+
+    def __str__(self):
+        """사용자용 (읽기 쉽게)"""
+        return f"{self.amount:,}{self.currency}"
+
+    def __repr__(self):
+        """개발자용 (재생성 가능하게)"""
+        return f"Money({self.amount}, '{self.currency}')"
+
+    def __format__(self, format_spec):
+        """포맷팅 (f-string 등)"""
+        if format_spec == "short":
+            return f"{self.amount//1000}K"
+        elif format_spec == "full":
+            return f"{self.amount:,} {self.currency}"
+        return str(self)
+
+# 사용
+money = Money(1234567)
+
+print(str(money))    # 1,234,567KRW - __str__
+print(repr(money))   # Money(1234567, 'KRW') - __repr__
+print(f"{money}")    # 1,234,567KRW - __str__
+print(f"{money:short}")  # 1234K - __format__
+print(f"{money:full}")   # 1,234,567 KRW - __format__
+
+# 리스트에선 __repr__ 사용
+print([money])       # [Money(1234567, 'KRW')]
+```
+
+---
+
+## 11.4 컨테이너 프로토콜
+
+> 📦 **비유**: 컨테이너 프로토콜은 **상자의 규칙**입니다.
+> - 어떻게 접근? (`__getitem__`)
+> - 얼마나 들어있? (`__len__`)
+> - 뭐가 들어있? (`__contains__`)
+
+### 시퀀스 프로토콜
+
+```python
+class Playlist:
+    """재생 목록"""
+
+    def __init__(self):
+        self._songs = []
+
+    def add(self, song):
+        """곡 추가"""
+        self._songs.append(song)
+
+    def __len__(self):
+        """len(playlist)"""
+        return len(self._songs)
+
+    def __getitem__(self, index):
+        """playlist[index]"""
+        return self._songs[index]
+
+    def __setitem__(self, index, value):
+        """playlist[index] = value"""
+        self._songs[index] = value
+
+    def __delitem__(self, index):
+        """del playlist[index]"""
+        del self._songs[index]
+
+    def __contains__(self, song):
+        """song in playlist"""
+        return song in self._songs
+
+    def __iter__(self):
+        """for song in playlist"""
+        return iter(self._songs)
+
+    def __reversed__(self):
+        """reversed(playlist)"""
+        return reversed(self._songs)
+
+
+# 사용
+playlist = Playlist()
+playlist.add("Song 1")
+playlist.add("Song 2")
+playlist.add("Song 3")
+
+# len()
+print(len(playlist))  # 3
+
+# 인덱싱
+print(playlist[0])    # Song 1
+playlist[1] = "New Song 2"
+print(playlist[1])    # New Song 2
+
+# in 연산자
+print("Song 1" in playlist)  # True
+
+# for 루프
+for song in playlist:
+    print(song)
+# Song 1
+# New Song 2
+# Song 3
+
+# 슬라이싱
+print(playlist[0:2])  # ['Song 1', 'New Song 2']
+
+# 역순
+for song in reversed(playlist):
+    print(song)
+# Song 3
+# New Song 2
+# Song 1
+```
+
+---
+
+### 딕셔너리 프로토콜
+
+```python
+class CaseInsensitiveDict:
+    """대소문자 무시 딕셔너리"""
+
+    def __init__(self):
+        self._data = {}
+
+    def __getitem__(self, key):
+        """dict[key]"""
+        return self._data[key.lower()]
+
+    def __setitem__(self, key, value):
+        """dict[key] = value"""
+        self._data[key.lower()] = value
+
+    def __delitem__(self, key):
+        """del dict[key]"""
+        del self._data[key.lower()]
+
+    def __contains__(self, key):
+        """key in dict"""
+        return key.lower() in self._data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        """for key in dict"""
+        return iter(self._data)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
+
+# 사용
+d = CaseInsensitiveDict()
+d["Name"] = "Alice"
+d["AGE"] = 25
+
+print(d["name"])  # Alice (소문자로 접근)
+print(d["Age"])   # 25 (대소문자 무시)
+print("NAME" in d)  # True
+
+for key in d:
+    print(f"{key}: {d[key]}")
+# name: Alice
+# age: 25
+```
+
+---
+
+## 11.5 수치 연산 오버로딩
+
+### 기본 산술 연산
+
+```python
+class Vector:
+    """2D 벡터"""
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __add__(self, other):
+        """+ 연산"""
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        """- 연산"""
+        return Vector(self.x - other.x, self.y - other.y)
+
+    def __mul__(self, scalar):
+        """* 연산 (스칼라 곱)"""
+        return Vector(self.x * scalar, self.y * scalar)
+
+    def __truediv__(self, scalar):
+        """/ 연산"""
+        return Vector(self.x / scalar, self.y / scalar)
+
+    def __neg__(self):
+        """-vec (단항 연산)"""
+        return Vector(-self.x, -self.y)
+
+    def __abs__(self):
+        """abs(vec) - 크기"""
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+
+    def __eq__(self, other):
+        """== 연산"""
+        return self.x == other.x and self.y == other.y
+
+    def __str__(self):
+        return f"Vector({self.x}, {self.y})"
+
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
+
+
+# 사용
+v1 = Vector(3, 4)
+v2 = Vector(1, 2)
+
+print(v1 + v2)    # Vector(4, 6)
+print(v1 - v2)    # Vector(2, 2)
+print(v1 * 2)     # Vector(6, 8)
+print(v1 / 2)     # Vector(1.5, 2.0)
+print(-v1)        # Vector(-3, -4)
+print(abs(v1))    # 5.0
+print(v1 == v2)   # False
+```
+
+---
+
+### 복합 할당 연산자
+
+```python
+class Counter:
+    def __init__(self, value=0):
+        self.value = value
+
+    def __iadd__(self, other):
+        """+= 연산 (in-place)"""
+        self.value += other
+        return self  # 중요: self 반환
+
+    def __isub__(self, other):
+        """-= 연산"""
+        self.value -= other
+        return self
+
+    def __imul__(self, other):
+        """*= 연산"""
+        self.value *= other
+        return self
+
+    def __str__(self):
+        return f"Counter({self.value})"
+
+
+# 사용
+counter = Counter(10)
+print(counter)    # Counter(10)
+
+counter += 5
+print(counter)    # Counter(15)
+
+counter *= 2
+print(counter)    # Counter(30)
+
+counter -= 10
+print(counter)    # Counter(20)
+```
+
+---
+
+## 11.6 비교 연산자
+
+```python
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def __eq__(self, other):
+        """== 연산"""
+        return self.age == other.age
+
+    def __ne__(self, other):
+        """!= 연산"""
+        return self.age != other.age
+
+    def __lt__(self, other):
+        """< 연산"""
+        return self.age < other.age
+
+    def __le__(self, other):
+        """<= 연산"""
+        return self.age <= other.age
+
+    def __gt__(self, other):
+        """> 연산"""
+        return self.age > other.age
+
+    def __ge__(self, other):
+        """>= 연산"""
+        return self.age >= other.age
+
+    def __str__(self):
+        return f"{self.name}({self.age}세)"
+
+
+# 사용
+alice = Person("Alice", 25)
+bob = Person("Bob", 30)
+charlie = Person("Charlie", 25)
+
+print(alice == charlie)  # True (나이가 같음)
+print(alice < bob)       # True
+print(alice >= charlie)  # True
+
+# 정렬 가능!
+people = [bob, alice, charlie]
+sorted_people = sorted(people)  # __lt__ 사용
+
+for person in sorted_people:
+    print(person)
+# Alice(25세)
+# Charlie(25세)
+# Bob(30세)
+```
+
+---
+
+### functools.total_ordering
+
+```python
+from functools import total_ordering
+
+@total_ordering
+class Student:
+    """__eq__와 __lt__만 정의하면 나머지 자동 생성"""
+
+    def __init__(self, name, grade):
+        self.name = name
+        self.grade = grade
+
+    def __eq__(self, other):
+        return self.grade == other.grade
+
+    def __lt__(self, other):
+        return self.grade < other.grade
+
+    def __str__(self):
+        return f"{self.name}({self.grade}점)"
+
+
+# 사용
+s1 = Student("Alice", 90)
+s2 = Student("Bob", 85)
+
+print(s1 > s2)   # True - 자동 생성됨!
+print(s1 <= s2)  # False - 자동 생성됨!
+```
+
+---
+
+## 11.7 컨텍스트 매니저
+
+### 기본 구현
+
+```python
+class DatabaseConnection:
+    """데이터베이스 연결 관리"""
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+        self.connection = None
+
+    def __enter__(self):
+        """with 진입 시"""
+        print(f"연결 중: {self.host}:{self.port}")
+        self.connection = f"Connection<{self.host}:{self.port}>"
+        return self.connection
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """with 종료 시"""
+        print(f"연결 종료: {self.host}:{self.port}")
+
+        if exc_type is not None:
+            print(f"에러 발생: {exc_type.__name__}: {exc_val}")
+            return False  # 예외 전파
+
+        return True  # 예외 억제
+
+
+# 사용
+with DatabaseConnection("localhost", 5432) as conn:
+    print(f"쿼리 실행: {conn}")
+    # 작업...
+
+# 출력:
+# 연결 중: localhost:5432
+# 쿼리 실행: Connection<localhost:5432>
+# 연결 종료: localhost:5432
+```
+
+---
+
+### 예외 처리
+
+```python
+class ErrorHandler:
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        print(f"{self.name} 시작")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            print(f"{self.name} 정상 종료")
+        else:
+            print(f"{self.name} 에러: {exc_val}")
+            return True  # 예외 억제 (전파 안 함)
+
+
+# 사용
+with ErrorHandler("작업 1"):
+    print("작업 실행")
+    raise ValueError("테스트 에러")
+    print("이 줄은 실행 안 됨")
+
+print("프로그램 계속 실행")  # 예외가 억제되어 실행됨
+
+# 출력:
+# 작업 1 시작
+# 작업 실행
+# 작업 1 에러: 테스트 에러
+# 프로그램 계속 실행
+```
+
+---
+
+### contextlib 활용
+
+```python
+from contextlib import contextmanager
+
+@contextmanager
+def timer(name):
+    """시간 측정"""
+    import time
+    print(f"{name} 시작...")
+    start = time.time()
+
+    try:
+        yield  # with 블록 실행
+    finally:
+        elapsed = time.time() - start
+        print(f"{name} 완료 ({elapsed:.2f}초)")
+
+
+# 사용
+with timer("데이터 처리"):
+    # 시간이 걸리는 작업
+    total = sum(range(1000000))
+    print(f"합계: {total}")
+
+# 출력:
+# 데이터 처리 시작...
+# 합계: 499999500000
+# 데이터 처리 완료 (0.03초)
+```
+
+---
+
+## 11.8 호출 가능 객체
+
+### `__call__`: 함수처럼 호출
+
+```python
+class Multiplier:
+    """곱셈 함수 객체"""
+
+    def __init__(self, factor):
+        self.factor = factor
+
+    def __call__(self, x):
+        """obj(x) 호출 시"""
+        return x * self.factor
+
+
+# 사용
+double = Multiplier(2)
+triple = Multiplier(3)
+
+print(double(5))   # 10
+print(triple(5))   # 15
+
+# 함수처럼 사용
+numbers = [1, 2, 3, 4, 5]
+doubled = list(map(double, numbers))
+print(doubled)  # [2, 4, 6, 8, 10]
+```
+
+---
+
+### 실전 예제: 데코레이터 클래스
+
+```python
+class CountCalls:
+    """함수 호출 횟수 카운트"""
+
+    def __init__(self, func):
+        self.func = func
+        self.count = 0
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"[{self.func.__name__}] {self.count}번째 호출")
+        return self.func(*args, **kwargs)
+
+
+@CountCalls
+def greet(name):
+    return f"안녕하세요, {name}님!"
+
+
+# 사용
+print(greet("Alice"))
+# [greet] 1번째 호출
+# 안녕하세요, Alice님!
+
+print(greet("Bob"))
+# [greet] 2번째 호출
+# 안녕하세요, Bob님!
+
+print(f"총 호출 횟수: {greet.count}")
+# 총 호출 횟수: 2
+```
+
+---
+
+## 11.9 속성 접근 제어
+
+### `__getattr__`, `__setattr__`, `__delattr__`
+
+```python
+class DynamicObject:
+    """동적 속성 관리"""
+
+    def __init__(self):
+        # __dict__에 직접 쓰기 (무한 재귀 방지)
+        object.__setattr__(self, '_data', {})
+
+    def __getattr__(self, name):
+        """obj.name (속성이 없을 때)"""
+        print(f"__getattr__: {name}")
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'{name}' 속성이 없습니다")
+
+    def __setattr__(self, name, value):
+        """obj.name = value"""
+        print(f"__setattr__: {name} = {value}")
+        if name == '_data':
+            object.__setattr__(self, name, value)
+        else:
+            self._data[name] = value
+
+    def __delattr__(self, name):
+        """del obj.name"""
+        print(f"__delattr__: {name}")
+        if name in self._data:
+            del self._data[name]
+        else:
+            raise AttributeError(f"'{name}' 속성이 없습니다")
+
+
+# 사용
+obj = DynamicObject()
+
+obj.name = "Alice"
+# __setattr__: name = Alice
+
+print(obj.name)
+# __getattr__: name
+# Alice
+
+del obj.name
+# __delattr__: name
+```
+
+---
+
+### 실전 예제: 읽기 전용 객체
+
+```python
+class ReadOnlyObject:
+    """읽기 전용 객체"""
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            object.__setattr__(self, key, value)
+        object.__setattr__(self, '_frozen', True)
+
+    def __setattr__(self, name, value):
+        if hasattr(self, '_frozen') and self._frozen:
+            raise AttributeError(f"읽기 전용 객체: '{name}' 수정 불가")
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        raise AttributeError("읽기 전용 객체: 속성 삭제 불가")
+
+
+# 사용
+user = ReadOnlyObject(name="Alice", age=25)
+
+print(user.name)  # Alice
+print(user.age)   # 25
+
+try:
+    user.name = "Bob"
+except AttributeError as e:
+    print(e)  # 읽기 전용 객체: 'name' 수정 불가
+
+try:
+    del user.age
+except AttributeError as e:
+    print(e)  # 읽기 전용 객체: 속성 삭제 불가
+```
+
+---
+
+## 11.10 디스크립터 (Descriptor)
+
+> 🎛️ **비유**: 디스크립터는 **속성의 관리자**입니다.
+> - 속성 접근을 세밀하게 제어
+
+```python
+class TypedProperty:
+    """타입 검증 디스크립터"""
+
+    def __init__(self, name, expected_type):
+        self.name = name
+        self.expected_type = expected_type
+
+    def __get__(self, obj, objtype=None):
+        """obj.attr 읽기"""
+        if obj is None:
+            return self
+        return obj.__dict__.get(self.name)
+
+    def __set__(self, obj, value):
+        """obj.attr = value 쓰기"""
+        if not isinstance(value, self.expected_type):
+            raise TypeError(
+                f"{self.name}은 {self.expected_type.__name__} 타입이어야 합니다"
+            )
+        obj.__dict__[self.name] = value
+
+    def __delete__(self, obj):
+        """del obj.attr"""
+        del obj.__dict__[self.name]
+
+
+class Person:
+    """디스크립터 사용"""
+
+    name = TypedProperty('name', str)
+    age = TypedProperty('age', int)
+
+    def __init__(self, name, age):
+        self.name = name  # TypedProperty.__set__ 호출
+        self.age = age
+
+
+# 사용
+person = Person("Alice", 25)
+
+print(person.name)  # Alice
+print(person.age)   # 25
+
+try:
+    person.age = "thirty"  # 문자열 대입
+except TypeError as e:
+    print(e)  # age은 int 타입이어야 합니다
+```
+
+---
+
+### 실전 예제: 검증 디스크립터
+
+```python
+class Validator:
+    """기본 검증 디스크립터"""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __set_name__(self, owner, name):
+        """클래스 정의 시 자동 호출 (Python 3.6+)"""
+        self.name = name
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return obj.__dict__.get(self.name)
+
+    def __set__(self, obj, value):
+        self.validate(value)
+        obj.__dict__[self.name] = value
+
+    def validate(self, value):
+        """자식 클래스에서 구현"""
+        pass
+
+
+class PositiveNumber(Validator):
+    """양수 검증"""
+
+    def validate(self, value):
+        if value <= 0:
+            raise ValueError(f"{self.name}은 양수여야 합니다")
+
+
+class NonEmptyString(Validator):
+    """비어있지 않은 문자열"""
+
+    def validate(self, value):
+        if not isinstance(value, str):
+            raise TypeError(f"{self.name}은 문자열이어야 합니다")
+        if not value.strip():
+            raise ValueError(f"{self.name}은 비어있을 수 없습니다")
+
+
+class Product:
+    """상품 (검증 적용)"""
+
+    name = NonEmptyString()
+    price = PositiveNumber()
+    quantity = PositiveNumber()
+
+    def __init__(self, name, price, quantity):
+        self.name = name
+        self.price = price
+        self.quantity = quantity
+
+    def total(self):
+        return self.price * self.quantity
+
+
+# 사용
+product = Product("노트북", 1000000, 2)
+print(f"{product.name}: {product.total():,}원")
+
+try:
+    product.price = -100
+except ValueError as e:
+    print(e)  # price은 양수여야 합니다
+
+try:
+    product.name = ""
+except ValueError as e:
+    print(e)  # name은 비어있을 수 없습니다
+```
+
+---
+
+## 11.11 실전 예제: 완전한 클래스
+
+```python
+from functools import total_ordering
+from contextlib import contextmanager
+
+@total_ordering
+class BankAccount:
+    """은행 계좌 (모든 특수 메서드 활용)"""
+
+    _account_count = 0
+
+    def __init__(self, owner, balance=0):
+        self.owner = owner
+        self._balance = balance
+        self._transaction_log = []
+        BankAccount._account_count += 1
+        self._account_number = f"ACC{BankAccount._account_count:04d}"
+
+    # --- 문자열 표현 ---
+    def __str__(self):
+        return f"{self.owner}님 계좌 (잔액: {self._balance:,}원)"
+
+    def __repr__(self):
+        return f"BankAccount('{self.owner}', {self._balance})"
+
+    # --- 비교 연산 ---
+    def __eq__(self, other):
+        return self._balance == other._balance
+
+    def __lt__(self, other):
+        return self._balance < other._balance
+
+    # --- 산술 연산 ---
+    def __add__(self, amount):
+        """계좌 + 금액 = 새 계좌"""
+        return BankAccount(self.owner, self._balance + amount)
+
+    def __iadd__(self, amount):
+        """계좌 += 금액 (입금)"""
+        self.deposit(amount)
+        return self
+
+    def __sub__(self, amount):
+        """계좌 - 금액 = 새 계좌"""
+        return BankAccount(self.owner, self._balance - amount)
+
+    def __isub__(self, amount):
+        """계좌 -= 금액 (출금)"""
+        self.withdraw(amount)
+        return self
+
+    # --- 컨테이너 ---
+    def __len__(self):
+        """거래 내역 수"""
+        return len(self._transaction_log)
+
+    def __getitem__(self, index):
+        """거래 내역 조회"""
+        return self._transaction_log[index]
+
+    # --- 컨텍스트 매니저 ---
+    @contextmanager
+    def transaction(self, description):
+        """트랜잭션 관리"""
+        print(f"트랜잭션 시작: {description}")
+        original_balance = self._balance
+
+        try:
+            yield self
+            print(f"트랜잭션 완료: {description}")
+        except Exception as e:
+            self._balance = original_balance
+            print(f"트랜잭션 실패 (롤백): {e}")
+            raise
+
+    # --- 비즈니스 메서드 ---
+    def deposit(self, amount):
+        """입금"""
+        if amount <= 0:
+            raise ValueError("입금액은 0보다 커야 합니다")
+        self._balance += amount
+        self._log_transaction("입금", amount)
+        return self._balance
+
+    def withdraw(self, amount):
+        """출금"""
+        if amount <= 0:
+            raise ValueError("출금액은 0보다 커야 합니다")
+        if amount > self._balance:
+            raise ValueError("잔액이 부족합니다")
+        self._balance -= amount
+        self._log_transaction("출금", amount)
+        return self._balance
+
+    def _log_transaction(self, type, amount):
+        """거래 기록"""
+        import datetime
+        self._transaction_log.append({
+            'type': type,
+            'amount': amount,
+            'balance': self._balance,
+            'time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    @property
+    def balance(self):
+        """잔액 (읽기 전용)"""
+        return self._balance
+
+    def show_log(self):
+        """거래 내역 출력"""
+        print(f"\n=== {self.owner}님 거래 내역 ===")
+        for i, log in enumerate(self._transaction_log, 1):
+            print(f"{i}. [{log['time']}] {log['type']} {log['amount']:,}원 "
+                  f"(잔액: {log['balance']:,}원)")
+
+
+# 사용
+print("=== 특수 메서드 테스트 ===\n")
+
+# 생성
+alice = BankAccount("Alice", 100000)
+bob = BankAccount("Bob", 50000)
+
+# __str__
+print(alice)  # Alice님 계좌 (잔액: 100,000원)
+
+# __repr__
+print(repr(bob))  # BankAccount('Bob', 50000)
+
+# 비교 연산
+print(f"\nAlice > Bob: {alice > bob}")  # True
+
+# 산술 연산
+alice += 50000  # 입금
+print(alice)    # Alice님 계좌 (잔액: 150,000원)
+
+alice -= 30000  # 출금
+print(alice)    # Alice님 계좌 (잔액: 120,000원)
+
+# 컨텍스트 매니저
+with alice.transaction("월급 입금"):
+    alice.deposit(3000000)
+
+# 거래 내역
+print(f"\n거래 횟수: {len(alice)}")
+print(f"첫 번째 거래: {alice[0]}")
+
+alice.show_log()
+
+# 출력:
+# === 특수 메서드 테스트 ===
+#
+# Alice님 계좌 (잔액: 100,000원)
+# BankAccount('Bob', 50000)
+#
+# Alice > Bob: True
+# Alice님 계좌 (잔액: 150,000원)
+# Alice님 계좌 (잔액: 120,000원)
+# 트랜잭션 시작: 월급 입금
+# 트랜잭션 완료: 월급 입금
+#
+# 거래 횟수: 4
+# 첫 번째 거래: {'type': '입금', 'amount': 50000, 'balance': 150000, 'time': '...'}
+#
+# === Alice님 거래 내역 ===
+# 1. [...] 입금 50,000원 (잔액: 150,000원)
+# 2. [...] 출금 30,000원 (잔액: 120,000원)
+# 3. [...] 입금 3,000,000원 (잔액: 3,120,000원)
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 꼭 필요한 특수 메서드만
+
+```python
+# ❌ 과도한 구현
+class Point:
+    def __add__(self, other): ...
+    def __sub__(self, other): ...
+    def __mul__(self, other): ...
+    def __truediv__(self, other): ...
+    def __floordiv__(self, other): ...
+    def __mod__(self, other): ...
+    # ... 너무 많음
+
+# ✅ 필요한 것만
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"
+```
+
+---
+
+### 💡 Tip 2: 불변 객체 만들기
+
+```python
+class ImmutablePoint:
+    """불변 포인트"""
+
+    def __init__(self, x, y):
+        object.__setattr__(self, 'x', x)
+        object.__setattr__(self, 'y', y)
+
+    def __setattr__(self, name, value):
+        raise AttributeError("불변 객체입니다")
+
+    def __delattr__(self, name):
+        raise AttributeError("불변 객체입니다")
+
+    def __hash__(self):
+        """해시 가능 (딕셔너리 키로 사용)"""
+        return hash((self.x, self.y))
+```
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **문자열 표현**
+   - `__str__`: 사용자용
+   - `__repr__`: 개발자용
+
+2. **컨테이너**
+   - `__len__`, `__getitem__`, `__setitem__`
+   - `__contains__`, `__iter__`
+
+3. **연산자**
+   - `__add__`, `__sub__`, `__mul__` 등
+   - `__eq__`, `__lt__` 등 (비교)
+
+4. **컨텍스트 매니저**
+   - `__enter__`, `__exit__`
+
+5. **호출 가능**
+   - `__call__`
+
+6. **속성 접근**
+   - `__getattr__`, `__setattr__`
+
+---
+
+## Part 4 완료!
+
+Part 4 (객체지향 프로그래밍)을 마쳤습니다:
+- ✅ Chapter 9: 클래스와 객체
+- ✅ Chapter 10: 상속과 다형성
+- ✅ Chapter 11: 특수 메서드
+
+---
+
+## 다음 챕터 예고
+
+Chapter 12에서는 **데코레이터**를 다룹니다:
+- 함수 데코레이터
+- 클래스 데코레이터
+- 데코레이터 체이닝
+- functools 활용
+
+---
+
+[다음: Chapter 12. 데코레이터 →](../part5-advanced/chapter12-decorators.md)

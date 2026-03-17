@@ -1,0 +1,553 @@
+# Chapter 3. 데이터 타입
+
+## 3.1 숫자 타입
+
+> 🔢 **비유**: Python의 숫자는 **지능형 계산기**입니다.
+> - int: 무한 크기 (메모리 허용하는 한)
+> - float: 소수점 계산
+> - complex: 공학용 계산 (허수)
+
+### int (정수)
+
+**Python의 놀라운 특징**: 크기 제한 없음!
+
+```python
+# 작은 숫자
+small = 42
+
+# 큰 숫자
+big = 12345678901234567890
+
+# 아주아주 큰 숫자
+huge = 10 ** 100  # 1 뒤에 0이 100개!
+print(huge)  # 정상 출력!
+
+# 다양한 진법 표현
+binary = 0b1010      # 2진수: 10
+octal = 0o12         # 8진수: 10
+hexadecimal = 0xA    # 16진수: 10
+
+print(binary, octal, hexadecimal)  # 10 10 10
+```
+
+**Java와 비교**:
+```java
+// Java - 크기 제한 있음
+int small = 42;              // -2^31 ~ 2^31-1
+long big = 123456789L;       // -2^63 ~ 2^63-1
+BigInteger huge = new BigInteger("12345678901234567890");  // 불편!
+
+// Python - 제한 없음
+small = 42
+big = 123456789
+huge = 12345678901234567890  // 그냥 됨!
+```
+
+**실생활 예시**:
+```python
+# 구글(Googol) 계산 - 1 뒤에 0이 100개
+googol = 10 ** 100
+print(f"Googol: {googol}")
+
+# 팩토리얼 (계승)
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+# 100! 도 문제없음!
+result = factorial(100)
+print(f"100! = {result}")  # 엄청 큰 숫자지만 정상 계산
+```
+
+---
+
+### float (실수)
+
+> 💧 **주의**: float는 **근사값**입니다 (완벽하지 않음)
+
+```python
+# 기본 사용
+pi = 3.14159
+e = 2.71828
+
+# 과학적 표기법
+speed_of_light = 3e8  # 3 * 10^8 = 300,000,000
+electron_mass = 9.1e-31  # 9.1 * 10^-31
+
+# ⚠️ 부동소수점 오차
+print(0.1 + 0.2)  # 0.30000000000000004 (왜 0.3이 아닐까?)
+print(0.1 + 0.2 == 0.3)  # False (놀랍게도!)
+```
+
+**왜 오차가 생길까?**
+> 🖥️ **비유**: float는 **사진 압축**과 같습니다.
+> - 원본(실제 값): 완벽한 화질
+> - JPEG(float): 약간 손실됨
+> - 0.1을 2진수로 표현하면 무한소수가 되어 끊김
+
+**올바른 실수 비교**:
+```python
+# ❌ 직접 비교 (위험!)
+if 0.1 + 0.2 == 0.3:
+    print("같음")  # 실행 안 됨
+
+# ✅ 오차 범위 내에서 비교
+import math
+
+a = 0.1 + 0.2
+b = 0.3
+
+if math.isclose(a, b):
+    print("같음")  # 실행됨!
+
+# 또는 반올림
+if round(a, 10) == round(b, 10):
+    print("같음")
+```
+
+**실생활 예시**:
+```python
+# 금액 계산 - 정확성이 중요할 때는 Decimal 사용
+from decimal import Decimal
+
+# ❌ float 사용 (오차 발생 가능)
+price = 0.1
+quantity = 3
+total = price * quantity
+print(total)  # 0.30000000000000004
+
+# ✅ Decimal 사용 (정확함)
+price = Decimal('0.1')
+quantity = 3
+total = price * quantity
+print(total)  # 0.3 (정확!)
+```
+
+---
+
+### complex (복소수)
+
+공학, 물리학에서 사용
+
+```python
+# 복소수 생성
+z1 = 3 + 4j  # 3 + 4i
+z2 = complex(2, 5)  # 2 + 5i
+
+# 연산
+print(z1 + z2)  # (5+9j)
+print(z1 * z2)  # (-14+23j)
+
+# 실수부, 허수부
+print(z1.real)  # 3.0
+print(z1.imag)  # 4.0
+
+# 절댓값 (magnitude)
+print(abs(z1))  # 5.0 (피타고라스)
+```
+
+---
+
+### 숫자 연산
+
+```python
+# 기본 연산
+print(10 + 3)   # 13
+print(10 - 3)   # 7
+print(10 * 3)   # 30
+print(10 / 3)   # 3.3333... (항상 float)
+print(10 // 3)  # 3 (정수 나눗셈)
+print(10 % 3)   # 1 (나머지)
+print(10 ** 3)  # 1000 (거듭제곱)
+
+# 내장 함수
+print(abs(-5))      # 5 (절댓값)
+print(round(3.7))   # 4 (반올림)
+print(pow(2, 10))   # 1024 (거듭제곱)
+print(max(1, 5, 3)) # 5 (최댓값)
+print(min(1, 5, 3)) # 1 (최솟값)
+
+# math 모듈
+import math
+
+print(math.ceil(3.2))   # 4 (올림)
+print(math.floor(3.8))  # 3 (내림)
+print(math.sqrt(16))    # 4.0 (제곱근)
+print(math.pi)          # 3.141592653589793
+```
+
+**실생활 예시**:
+```python
+# 원의 넓이 계산
+import math
+
+radius = 5
+area = math.pi * radius ** 2
+print(f"반지름 {radius}인 원의 넓이: {area:.2f}")
+
+# 평균, 중앙값, 표준편차
+import statistics
+
+scores = [85, 90, 78, 92, 88]
+print(f"평균: {statistics.mean(scores)}")
+print(f"중앙값: {statistics.median(scores)}")
+print(f"표준편차: {statistics.stdev(scores):.2f}")
+```
+
+---
+
+## 3.2 불린 (bool)
+
+> ⚪⚫ **비유**: bool은 **전등 스위치**입니다.
+> - True: 켜짐 (1)
+> - False: 꺼짐 (0)
+
+```python
+# 기본 값
+is_active = True   # 첫 글자 대문자!
+is_closed = False
+
+# bool은 int의 하위 타입
+print(True == 1)   # True
+print(False == 0)  # True
+print(True + True) # 2 (True = 1)
+
+# 비교 연산 결과는 bool
+print(5 > 3)       # True
+print(10 == 5)     # False
+
+# 논리 연산
+print(True and False)  # False
+print(True or False)   # True
+print(not True)        # False
+```
+
+**Truthy / Falsy 값** (중요!):
+```python
+# Falsy (False로 간주되는 값들)
+print(bool(False))  # False
+print(bool(None))   # False
+print(bool(0))      # False
+print(bool(0.0))    # False
+print(bool(""))     # False
+print(bool([]))     # False
+print(bool({}))     # False
+print(bool(()))     # False
+
+# Truthy (True로 간주되는 값들)
+print(bool(True))   # True
+print(bool(42))     # True
+print(bool(-1))     # True
+print(bool("text")) # True
+print(bool([1]))    # True
+print(bool({"a": 1}))  # True
+```
+
+**실전 활용**:
+```python
+# 입력 검증
+username = input("사용자명: ")
+
+if username:  # 비어있지 않으면 True
+    print(f"환영합니다, {username}님!")
+else:
+    print("사용자명을 입력해주세요")
+
+# 리스트가 비어있는지 확인
+results = []
+
+if not results:  # 빈 리스트는 False
+    print("검색 결과가 없습니다")
+else:
+    print(f"{len(results)}개의 결과를 찾았습니다")
+```
+
+---
+
+## 3.3 None 타입
+
+> 🕳️ **비유**: None은 **빈 상자**입니다.
+> - Java의 null과 유사하지만 객체임
+> - "값이 없음"을 명시적으로 표현
+
+```python
+# None 사용
+result = None
+user = None
+
+# None 체크
+if result is None:  # == 대신 is 사용!
+    print("결과 없음")
+
+if user is not None:
+    print(f"사용자: {user}")
+```
+
+**None vs 0 vs "" vs []**:
+```python
+# 모두 다름!
+print(None == 0)    # False
+print(None == "")   # False
+print(None == [])   # False
+print(None == False)  # False
+
+# 하지만 모두 Falsy
+print(bool(None))   # False
+print(bool(0))      # False
+print(bool(""))     # False
+print(bool([]))     # False
+```
+
+**실생활 예시**:
+```python
+def find_user(user_id):
+    """사용자를 찾습니다. 없으면 None 반환"""
+    users = {
+        1: "Alice",
+        2: "Bob"
+    }
+    return users.get(user_id)  # 없으면 None
+
+# 사용
+user = find_user(3)
+
+if user is None:
+    print("사용자를 찾을 수 없습니다")
+else:
+    print(f"사용자: {user}")
+
+# Optional chaining (Python 3.8+)
+# Java: user?.getName()
+# Python: user and user.getName() 또는 user.getName() if user else None
+```
+
+---
+
+## 3.4 타입 변환
+
+> 🔄 **비유**: 타입 변환은 **번역기**입니다.
+> - 영어 → 한국어 (문자열 → 숫자)
+> - 한국어 → 영어 (숫자 → 문자열)
+
+### 명시적 변환
+
+```python
+# 문자열 → 숫자
+num1 = int("123")       # 123
+num2 = float("3.14")    # 3.14
+
+# 숫자 → 문자열
+str1 = str(123)         # "123"
+str2 = str(3.14)        # "3.14"
+
+# 불린 변환
+b1 = bool(1)            # True
+b2 = bool(0)            # False
+b3 = bool("text")       # True
+
+# 리스트 → 튜플 → 셋
+lst = [1, 2, 3]
+tpl = tuple(lst)        # (1, 2, 3)
+st = set(lst)           # {1, 2, 3}
+```
+
+### 안전한 변환
+
+```python
+# ❌ 오류 발생 가능
+num = int("abc")  # ValueError!
+
+# ✅ 예외 처리
+try:
+    num = int(input("숫자 입력: "))
+except ValueError:
+    print("숫자를 입력해주세요")
+    num = 0
+
+# ✅ 기본값 사용
+def safe_int(value, default=0):
+    """안전하게 int로 변환"""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+print(safe_int("123"))    # 123
+print(safe_int("abc"))    # 0
+print(safe_int("abc", -1))  # -1
+```
+
+**실생활 예시**:
+```python
+# 사용자 입력 처리
+age_str = input("나이 입력: ")
+
+try:
+    age = int(age_str)
+    if 0 <= age <= 150:
+        print(f"나이: {age}세")
+    else:
+        print("유효하지 않은 나이입니다")
+except ValueError:
+    print("숫자를 입력해주세요")
+
+# CSV 데이터 파싱
+data = "Alice,30,alice@example.com"
+name, age, email = data.split(",")
+age = int(age)  # 문자열 "30" → 숫자 30
+
+print(f"이름: {name}, 나이: {age}, 이메일: {email}")
+```
+
+---
+
+## 실전 팁
+
+### 💡 Tip 1: 타입 확인
+
+```python
+# type()으로 타입 확인
+print(type(42))        # <class 'int'>
+print(type(3.14))      # <class 'float'>
+print(type("text"))    # <class 'str'>
+print(type(True))      # <class 'bool'>
+
+# isinstance()로 타입 체크
+num = 42
+if isinstance(num, int):
+    print("정수입니다")
+
+# 여러 타입 체크
+value = "123"
+if isinstance(value, (int, float)):
+    print("숫자입니다")
+elif isinstance(value, str):
+    print("문자열입니다")
+```
+
+---
+
+### 💡 Tip 2: divmod로 몫과 나머지 한 번에
+
+```python
+# ❌ 따로 계산
+quotient = 10 // 3  # 3
+remainder = 10 % 3  # 1
+
+# ✅ divmod 사용
+quotient, remainder = divmod(10, 3)
+print(f"몫: {quotient}, 나머지: {remainder}")
+
+# 실전: 시간 변환
+total_seconds = 3665
+
+hours, remainder = divmod(total_seconds, 3600)
+minutes, seconds = divmod(remainder, 60)
+
+print(f"{hours}시간 {minutes}분 {seconds}초")
+# 출력: 1시간 1분 5초
+```
+
+---
+
+### 💡 Tip 3: f-string 포매팅
+
+```python
+# 숫자 포매팅
+pi = 3.141592
+
+print(f"{pi:.2f}")      # 3.14 (소수점 2자리)
+print(f"{pi:.4f}")      # 3.1416 (소수점 4자리)
+print(f"{pi:10.2f}")    # "      3.14" (폭 10, 우측 정렬)
+
+# 천 단위 구분
+price = 1234567
+print(f"{price:,}")     # 1,234,567
+
+# 퍼센트
+rate = 0.1234
+print(f"{rate:.2%}")    # 12.34%
+
+# 2진수, 8진수, 16진수
+num = 42
+print(f"{num:b}")       # 101010 (2진수)
+print(f"{num:o}")       # 52 (8진수)
+print(f"{num:x}")       # 2a (16진수)
+```
+
+---
+
+## 연습 문제
+
+### 문제 1: 원의 넓이와 둘레
+
+반지름을 입력받아 원의 넓이와 둘레를 계산하세요.
+- 넓이: π × r²
+- 둘레: 2 × π × r
+
+<details>
+<summary>정답 보기</summary>
+
+```python
+import math
+
+radius = float(input("반지름 입력: "))
+
+area = math.pi * radius ** 2
+circumference = 2 * math.pi * radius
+
+print(f"넓이: {area:.2f}")
+print(f"둘레: {circumference:.2f}")
+```
+</details>
+
+---
+
+### 문제 2: 시간 변환
+
+초(seconds)를 입력받아 "시:분:초" 형식으로 출력하세요.
+
+<details>
+<summary>정답 보기</summary>
+
+```python
+total_seconds = int(input("초 입력: "))
+
+hours, remainder = divmod(total_seconds, 3600)
+minutes, seconds = divmod(remainder, 60)
+
+print(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+# :02d는 2자리로 표시, 부족하면 0으로 채움
+```
+</details>
+
+---
+
+## 핵심 요약
+
+### 꼭 기억할 것
+
+1. **int**
+   - 크기 제한 없음 (Python의 강점!)
+   - 다양한 진법 표현 (0b, 0o, 0x)
+
+2. **float**
+   - 부동소수점 오차 존재
+   - 정확한 계산 필요 시 Decimal 사용
+
+3. **bool**
+   - True, False (첫 글자 대문자!)
+   - Truthy / Falsy 값 이해 필수
+
+4. **None**
+   - Java의 null
+   - `is None` 사용 (== 아님)
+
+5. **타입 변환**
+   - int(), float(), str(), bool()
+   - 예외 처리 필수
+
+---
+
+[← 이전](../part1-getting-started/chapter2-basic-syntax.md) | [다음: Chapter 4 →](chapter4-collections.md)
