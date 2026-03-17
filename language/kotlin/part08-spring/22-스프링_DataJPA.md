@@ -668,4 +668,4 @@ interface UserRepository : JpaRepository<User, Long> {
 
 ---
 
-[← 이전](chapter21-spring-kotlin.md) | [다음: Chapter 23 →](chapter23-rest-api.md)
+[← 이전](21-스프링과_코틀린_통합.md) | [다음: Chapter 23 →](23-REST_API_개발.md)

@@ -754,4 +754,4 @@ data class CreateUserRequest(
 
 ---
 
-[← 이전](chapter22-spring-data-jpa.md) | [다음: Chapter 24 →](chapter24-coroutines-webflux.md)
+[← 이전](22-스프링_DataJPA.md) | [다음: Chapter 24 →](24-코루틴과_WebFlux.md)

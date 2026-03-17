@@ -480,4 +480,4 @@ println(sql)
 
 ---
 
-[← 이전](../part09-practice/chapter28-deployment.md) | [다음: 부록 B →](appendix-b-libraries.md)
+[← 이전](../part09-practice/28-배포.md) | [다음: 부록 B →](부록B-주요_라이브러리.md)

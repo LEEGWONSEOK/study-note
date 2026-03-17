@@ -631,4 +631,4 @@ Part 8: Kotlin과 Spring Boot를 모두 마쳤습니다!
 
 ---
 
-[← 이전](chapter23-rest-api.md) | [다음: Chapter 25 →](../part09-practice/chapter25-testing.md)
+[← 이전](23-REST_API_개발.md) | [다음: Chapter 25 →](../part09-practice/25-테스팅.md)

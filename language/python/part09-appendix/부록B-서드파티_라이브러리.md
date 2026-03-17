@@ -504,4 +504,4 @@ pip install requests pandas numpy pytest black sqlalchemy python-dotenv httpx ri
 
 ---
 
-**다음**: [부록 C. 커뮤니티 리소스](appendix-c-resources.md)
+**다음**: [부록 C. 커뮤니티 리소스](부록C-커뮤니티_리소스.md)

@@ -849,4 +849,4 @@ Kotlin의 컬렉션은 Java보다 훨씬 강력하고 사용하기 쉽습니다!
 
 ---
 
-[← 이전: Chapter 5. 클래스와 객체 기초](../part02-basic-syntax/chapter5-classes-objects.md) | [다음: Chapter 7. 컬렉션 →](chapter7-collections.md)
+[← 이전: Chapter 5. 클래스와 객체 기초](../part02-basic-syntax/05-클래스와_객체_기초.md) | [다음: Chapter 7. 컬렉션 →](07-컬렉션.md)

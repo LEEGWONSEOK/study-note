@@ -362,4 +362,4 @@
 
 ---
 
-[← 이전](appendix-b-libraries.md) | [처음으로](../README.md)
+[← 이전](부록B-주요_라이브러리.md) | [처음으로](../README.md)

@@ -543,4 +543,4 @@ plugins {
 
 ---
 
-[← 이전](appendix-a-kotlin-dsl.md) | [다음: 부록 C →](appendix-c-resources.md)
+[← 이전](부록A-코틀린_DSL.md) | [다음: 부록 C →](부록C-학습_리소스.md)
